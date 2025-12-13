@@ -114,12 +114,23 @@ export async function POST(req: NextRequest) {
       requirements: v.requirements,
     }));
 
+    // Get current date for context
+    const today = new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
     // Generate eligibility analysis using Claude
     const result = await generateObject({
       model: claudeModel,
       system: ELIGIBILITY_SYSTEM_PROMPT,
       prompt: `
+        CURRENT DATE: ${today}
+        
         Analyze the following user profile for visa eligibility and recommend the best pathways.
+        Use the current date when considering any time-sensitive requirements or policy changes.
 
         User Profile:
         - Current Country: ${userProfile.currentCountry}
@@ -139,6 +150,7 @@ export async function POST(req: NextRequest) {
         - Be realistic about eligibility scores based on the user's qualifications
         - Consider processing time, cost, and success rate in your assessment
         - Provide specific, actionable next steps
+        - Consider any recent policy changes or updates as of ${today}
       `,
       schema: PathwayResponseSchema,
       temperature: modelConfig.eligibility.temperature,

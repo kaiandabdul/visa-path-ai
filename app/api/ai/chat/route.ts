@@ -74,8 +74,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build context-aware system prompt
-    let systemPrompt = CHAT_SYSTEM_PROMPT;
+    // Build context-aware system prompt with current date
+    const today = new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    let systemPrompt = `${CHAT_SYSTEM_PROMPT}
+
+CURRENT DATE: ${today}
+Use this date when discussing timelines, deadlines, or time-sensitive visa information. Always provide the most current and relevant information based on this date.`;
 
     // Add visa context if provided (user clicked "Ask AI about this visa")
     if (visaContext) {
