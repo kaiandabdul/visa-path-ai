@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     const {
       messages,
       userContext,
-      visaContext, // Add visa context for context-aware conversations
+      visaContext,
+      userDocuments, // Uploaded documents from client
       userId,
       sessionId,
       pathwayId,
@@ -119,6 +120,28 @@ USER CONTEXT:
 ${JSON.stringify(enrichedContext, null, 2)}
 
 Use this context to provide personalized, relevant advice about their visa options. Reference their specific profile details when answering questions.`;
+    }
+
+    // Add uploaded documents context if available
+    if (
+      userDocuments &&
+      Array.isArray(userDocuments) &&
+      userDocuments.length > 0
+    ) {
+      const docSummary = userDocuments
+        .map(
+          (doc: { type: string; fileName: string; status: string }) =>
+            `- ${doc.type}: ${doc.fileName} (${doc.status})`
+        )
+        .join("\n");
+
+      systemPrompt += `
+
+UPLOADED DOCUMENTS:
+The user has uploaded the following documents that you can reference:
+${docSummary}
+
+When discussing visa requirements, you can mention which of their documents might be relevant or if any are missing.`;
     }
 
     // Stream the response using AI SDK v6

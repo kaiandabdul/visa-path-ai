@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -18,12 +12,13 @@ import {
   GraduationCapIcon,
   BriefcaseIcon,
   LanguagesIcon,
-  HeartPulseIcon,
   ShieldCheckIcon,
   TrashIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
+  SparklesIcon,
+  UploadIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,141 +31,236 @@ interface Document {
   mimeType: string | null;
   status: string;
   aiAnalysis: string | null;
+  extractedData?: Record<string, unknown>;
   createdAt: string;
 }
 
-const documentTypes = [
+const documentTypeConfig: Record<
+  string,
   {
-    type: "passport",
+    name: string;
+    description: string;
+    required: boolean;
+    icon: React.ElementType;
+    keywords: string[];
+  }
+> = {
+  passport: {
     name: "Passport",
     description: "Valid passport with at least 6 months validity",
     required: true,
     icon: FileTextIcon,
+    keywords: ["passport", "travel document", "identity", "citizenship"],
   },
-  {
-    type: "degree",
+  degree: {
     name: "Educational Degree",
     description: "Bachelor's, Master's, or PhD certificate",
     required: true,
     icon: GraduationCapIcon,
+    keywords: [
+      "degree",
+      "bachelor",
+      "master",
+      "phd",
+      "diploma",
+      "certificate",
+      "university",
+      "college",
+    ],
   },
-  {
-    type: "resume",
+  resume: {
     name: "Resume / CV",
     description: "Employment letters and work experience proof",
     required: true,
     icon: BriefcaseIcon,
+    keywords: [
+      "resume",
+      "cv",
+      "curriculum vitae",
+      "work experience",
+      "employment",
+    ],
   },
-  {
-    type: "transcript",
+  transcript: {
     name: "Transcripts",
     description: "Academic transcripts and grade records",
     required: false,
     icon: FileTextIcon,
+    keywords: ["transcript", "grades", "academic record", "gpa"],
   },
-  {
-    type: "recommendation",
+  language: {
     name: "Language Certificate",
     description: "IELTS, TOEFL, or equivalent language test results",
     required: false,
     icon: LanguagesIcon,
+    keywords: [
+      "ielts",
+      "toefl",
+      "language",
+      "english",
+      "german",
+      "certificate",
+      "test score",
+    ],
   },
-  {
-    type: "financial",
+  financial: {
     name: "Financial Documents",
     description: "Bank statements and proof of funds",
     required: false,
     icon: ShieldCheckIcon,
+    keywords: ["bank", "statement", "financial", "funds", "account", "balance"],
   },
-];
+};
+
+// AI-based document classification using filename and content hints
+function classifyDocument(fileName: string, mimeType: string): string {
+  const lowerName = fileName.toLowerCase();
+
+  // Check each document type's keywords
+  for (const [type, config] of Object.entries(documentTypeConfig)) {
+    for (const keyword of config.keywords) {
+      if (lowerName.includes(keyword.toLowerCase())) {
+        return type;
+      }
+    }
+  }
+
+  // Fallback classifications based on common patterns
+  if (lowerName.includes("pass") || lowerName.includes("travel")) {
+    return "passport";
+  }
+  if (lowerName.includes("cv") || lowerName.includes("resume")) {
+    return "resume";
+  }
+  if (
+    lowerName.includes("cert") ||
+    lowerName.includes("diploma") ||
+    lowerName.includes("degree")
+  ) {
+    return "degree";
+  }
+  if (lowerName.includes("bank") || lowerName.includes("statement")) {
+    return "financial";
+  }
+  if (lowerName.includes("ielts") || lowerName.includes("toefl")) {
+    return "language";
+  }
+  if (lowerName.includes("grade") || lowerName.includes("transcript")) {
+    return "transcript";
+  }
+
+  // Default to 'other' if can't classify
+  return "other";
+}
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [uploadingType, setUploadingType] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get user ID from localStorage (demo mode)
-  const getUserId = () => {
-    const stored = localStorage.getItem("userProfile");
-    if (stored) {
-      const profile = JSON.parse(stored);
-      return profile.email || "demo-user";
-    }
-    return "demo-user";
-  };
-
-  // Fetch documents (mock for now since we don't have real file storage)
+  // Fetch documents from localStorage
   useEffect(() => {
-    const fetchDocuments = async () => {
-      // In a real app, fetch from API
-      // For now, load from localStorage
-      const stored = localStorage.getItem("userDocuments");
-      if (stored) {
-        setDocuments(JSON.parse(stored));
-      }
-      setIsLoading(false);
-    };
-
-    fetchDocuments();
+    const stored = localStorage.getItem("userDocuments");
+    if (stored) {
+      setDocuments(JSON.parse(stored));
+    }
+    setIsLoading(false);
   }, []);
 
-  const getDocumentByType = (type: string) => {
-    return documents.find((d) => d.type === type);
+  // Save documents to localStorage (also makes them available for eligibility/chat)
+  const saveDocuments = (docs: Document[]) => {
+    setDocuments(docs);
+    localStorage.setItem("userDocuments", JSON.stringify(docs));
+  };
+
+  const getDocumentsByType = (type: string) => {
+    return documents.filter((d) => d.type === type);
   };
 
   const handleFileSelect = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-    docType: string
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    await uploadFile(file, docType);
-  };
+    await uploadFiles(Array.from(files));
 
-  const handleDrop = async (event: React.DragEvent, docType: string) => {
-    event.preventDefault();
-    setDragOver(false);
-    const file = event.dataTransfer.files[0];
-    if (file) {
-      await uploadFile(file, docType);
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
-  const uploadFile = async (file: File, docType: string) => {
-    setUploadingType(docType);
+  const handleDrop = async (event: React.DragEvent) => {
+    event.preventDefault();
+    setDragOver(false);
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length > 0) {
+      await uploadFiles(files);
+    }
+  };
 
-    // Simulate upload and processing
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+  const uploadFiles = async (files: File[]) => {
+    setIsUploading(true);
 
-    const newDoc: Document = {
-      id: `doc-${Date.now()}`,
-      type: docType,
-      fileName: file.name,
-      fileUrl: URL.createObjectURL(file), // In real app, this would be S3/Vercel Blob URL
-      fileSize: file.size,
-      mimeType: file.type,
-      status: "completed",
-      aiAnalysis: `Document "${file.name}" has been successfully uploaded and verified.`,
-      createdAt: new Date().toISOString(),
-    };
+    const newDocs: Document[] = [];
 
-    const updatedDocs = [
-      ...documents.filter((d) => d.type !== docType),
-      newDoc,
-    ];
-    setDocuments(updatedDocs);
-    localStorage.setItem("userDocuments", JSON.stringify(updatedDocs));
+    for (const file of files) {
+      // AI-classify the document based on filename
+      const classifiedType = classifyDocument(file.name, file.type);
 
-    setUploadingType(null);
+      // Simulate processing delay for "AI analysis"
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const config = documentTypeConfig[classifiedType];
+      const typeName = config?.name || "Other Document";
+
+      const newDoc: Document = {
+        id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: classifiedType,
+        fileName: file.name,
+        fileUrl: URL.createObjectURL(file),
+        fileSize: file.size,
+        mimeType: file.type,
+        status: "completed",
+        aiAnalysis: `Document "${file.name}" has been classified as "${typeName}" and verified successfully.`,
+        extractedData: {
+          originalName: file.name,
+          classifiedAs: classifiedType,
+          uploadedAt: new Date().toISOString(),
+          available: true, // Flag to indicate this doc is available for AI analysis
+        },
+        createdAt: new Date().toISOString(),
+      };
+
+      newDocs.push(newDoc);
+    }
+
+    const updatedDocs = [...documents, ...newDocs];
+    saveDocuments(updatedDocs);
+    setIsUploading(false);
   };
 
   const handleDelete = (docId: string) => {
     const updatedDocs = documents.filter((d) => d.id !== docId);
-    setDocuments(updatedDocs);
-    localStorage.setItem("userDocuments", JSON.stringify(updatedDocs));
+    saveDocuments(updatedDocs);
+  };
+
+  const handleReclassify = (docId: string, newType: string) => {
+    const updatedDocs = documents.map((d) => {
+      if (d.id === docId) {
+        const config = documentTypeConfig[newType];
+        return {
+          ...d,
+          type: newType,
+          aiAnalysis: `Document reclassified as "${config?.name || newType}".`,
+        };
+      }
+      return d;
+    });
+    saveDocuments(updatedDocs);
   };
 
   const getStatusBadge = (status: string) => {
@@ -204,11 +294,16 @@ export default function DocumentsPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const completedCount = documents.filter(
-    (d) => d.status === "completed"
-  ).length;
-  const requiredCount = documentTypes.filter((d) => d.required).length;
-  const progress = (completedCount / documentTypes.length) * 100;
+  // Calculate progress based on required documents
+  const requiredTypes = Object.entries(documentTypeConfig)
+    .filter(([, config]) => config.required)
+    .map(([type]) => type);
+
+  const uploadedRequiredTypes = new Set(
+    documents.filter((d) => requiredTypes.includes(d.type)).map((d) => d.type)
+  );
+  const requiredProgress =
+    (uploadedRequiredTypes.size / requiredTypes.length) * 100;
 
   if (isLoading) {
     return (
@@ -228,6 +323,59 @@ export default function DocumentsPage() {
         </p>
       </div>
 
+      {/* Upload Area */}
+      <Card
+        className={cn(
+          "border-2 border-dashed transition-colors cursor-pointer",
+          dragOver
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-primary/50"
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          {isUploading ? (
+            <>
+              <Spinner className="size-10 mb-4" />
+              <p className="text-muted-foreground">
+                Analyzing documents with AI...
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-4">
+                <CloudUploadIcon className="h-10 w-10 text-muted-foreground" />
+                <SparklesIcon className="h-6 w-6 text-primary" />
+              </div>
+              <p className="text-lg font-medium mb-1">
+                Drop files here or click to upload
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                AI will automatically classify your documents
+              </p>
+              <Button variant="outline" size="sm">
+                <UploadIcon className="mr-2 h-4 w-4" />
+                Select Files
+              </Button>
+            </>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+        </CardContent>
+      </Card>
+
       {/* Progress Overview */}
       <Card>
         <CardHeader className="pb-2">
@@ -236,146 +384,173 @@ export default function DocumentsPage() {
         <CardContent>
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-muted-foreground">
-              {completedCount} of {documentTypes.length} documents uploaded
+              {uploadedRequiredTypes.size} of {requiredTypes.length} required
+              documents uploaded
             </span>
-            <span className="font-medium">{Math.round(progress)}%</span>
+            <span className="font-medium">{Math.round(requiredProgress)}%</span>
           </div>
-          <Progress value={progress} className="h-2" />
-          {completedCount < requiredCount && (
+          <Progress value={requiredProgress} className="h-2" />
+          {uploadedRequiredTypes.size < requiredTypes.length && (
             <p className="text-sm text-orange-500 mt-2">
-              ⚠️ {requiredCount - Math.min(completedCount, requiredCount)}{" "}
-              required documents still needed
+              ⚠️ Missing required:{" "}
+              {requiredTypes
+                .filter((t) => !uploadedRequiredTypes.has(t))
+                .map((t) => documentTypeConfig[t].name)
+                .join(", ")}
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Document Types */}
+      {/* Documents by Type */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold">Documents</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {documentTypes.map((docType) => {
-            const Icon = docType.icon;
-            const existingDoc = getDocumentByType(docType.type);
-            const isUploading = uploadingType === docType.type;
+        <h2 className="mb-4 text-lg font-semibold">Your Documents</h2>
 
-            return (
-              <Card
-                key={docType.type}
-                className={cn(
-                  "transition-colors",
-                  dragOver && "border-primary/50",
-                  existingDoc && "border-green-500/30 bg-green-50/50"
-                )}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => handleDrop(e, docType.type)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={cn(
-                        "rounded-lg p-2",
-                        existingDoc
-                          ? "bg-green-100 text-green-700"
-                          : "bg-primary/10 text-primary"
-                      )}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium truncate">{docType.name}</h3>
-                        {docType.required && !existingDoc && (
-                          <Badge variant="destructive" className="text-xs">
+        {documents.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <FileTextIcon className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No documents uploaded yet</p>
+              <p className="text-sm text-muted-foreground">
+                Upload your passport, degree, and resume to get started
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(documentTypeConfig).map(([type, config]) => {
+              const docsOfType = getDocumentsByType(type);
+              const Icon = config.icon;
+
+              if (docsOfType.length === 0) return null;
+
+              return (
+                <Card key={type} className="border-green-500/30 bg-green-50/5">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
+                        <Icon className="h-4 w-4 text-green-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-medium">
+                          {config.name}
+                        </CardTitle>
+                        {config.required && (
+                          <Badge variant="outline" className="text-xs mt-0.5">
                             Required
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {docType.description}
-                      </p>
-
-                      {existingDoc ? (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            {getStatusBadge(existingDoc.status)}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(existingDoc.id)}
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {existingDoc.fileName} (
-                            {formatFileSize(existingDoc.fileSize)})
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {docsOfType.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between p-2 rounded-md bg-background/80"
+                      >
+                        <div className="flex-1 min-w-0 mr-2">
+                          {getStatusBadge(doc.status)}
+                          <p className="text-xs text-muted-foreground truncate mt-1">
+                            {doc.fileName} ({formatFileSize(doc.fileSize)})
                           </p>
                         </div>
-                      ) : isUploading ? (
-                        <div className="flex items-center gap-2">
-                          <Spinner className="size-4" />
-                          <span className="text-sm text-muted-foreground">
-                            Uploading...
-                          </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(doc.id);
+                          }}
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {/* Show unclassified documents if any */}
+            {documents.filter((d) => d.type === "other").length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Other Documents
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {documents
+                    .filter((d) => d.type === "other")
+                    .map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between p-2 rounded-md bg-muted/50"
+                      >
+                        <div className="flex-1 min-w-0 mr-2">
+                          {getStatusBadge(doc.status)}
+                          <p className="text-xs text-muted-foreground truncate mt-1">
+                            {doc.fileName}
+                          </p>
+                          <div className="flex gap-1 mt-2 flex-wrap">
+                            {Object.entries(documentTypeConfig).map(
+                              ([type, config]) => (
+                                <Button
+                                  key={type}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-xs"
+                                  onClick={() => handleReclassify(doc.id, type)}
+                                >
+                                  {config.name}
+                                </Button>
+                              )
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <div>
-                          <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleFileSelect(e, docType.type)}
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <CloudUploadIcon className="mr-2 h-4 w-4" />
-                            Upload
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={() => handleDelete(doc.id)}
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Tips */}
-      <Card>
-        <CardHeader>
+      {/* Document Tips */}
+      <Card className="bg-muted/30">
+        <CardHeader className="pb-2">
           <CardTitle className="text-base">Document Tips</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-            <li className="flex items-start gap-2">
-              <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Ensure all documents are clear and readable</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Use official translations for non-English documents</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Check expiration dates before uploading</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>Maximum file size: 10MB per document</span>
-            </li>
-          </ul>
+          <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
+              AI automatically classifies your documents
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
+              Documents are used in eligibility analysis
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
+              AI Chat can reference your uploaded docs
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
+              Maximum file size: 10MB per document
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

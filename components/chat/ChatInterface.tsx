@@ -79,6 +79,28 @@ What would you like to know about this visa?`,
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userDocuments, setUserDocuments] = useState<
+    Array<{ type: string; fileName: string; status: string }>
+  >([]);
+
+  // Load user documents from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("userDocuments");
+    if (stored) {
+      try {
+        const docs = JSON.parse(stored);
+        setUserDocuments(
+          docs.map((d: { type: string; fileName: string; status: string }) => ({
+            type: d.type,
+            fileName: d.fileName,
+            status: d.status,
+          }))
+        );
+      } catch (e) {
+        console.error("Failed to load user documents:", e);
+      }
+    }
+  }, []);
 
   // Update welcome message when visa context changes
   useEffect(() => {
@@ -122,7 +144,8 @@ What would you like to know about this visa?`,
             content: m.content,
           })),
           userContext,
-          visaContext, // Pass visa context to API
+          visaContext,
+          userDocuments, // Pass uploaded documents for context
         }),
       });
 
