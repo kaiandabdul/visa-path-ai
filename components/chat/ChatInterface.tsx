@@ -4,9 +4,10 @@ import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
 import { ChatMessage } from "./ChatMessage";
 import type { IntakeFormData } from "@/types";
-import { SendIcon } from "lucide-react";
+import { SendIcon, SparklesIcon } from "lucide-react";
 
 interface Message {
   id: string;
@@ -14,23 +15,78 @@ interface Message {
   content: string;
 }
 
-interface ChatInterfaceProps {
-  userContext?: IntakeFormData | null;
+interface VisaContext {
+  code: string;
+  name: string;
+  country: string;
+  category: string;
+  description?: string;
+  processingTimeAvg?: number;
+  applicationFee?: number;
+  currency?: string;
+  requirements?: Array<{
+    name: string;
+    description: string;
+    priority: string;
+  }>;
+  aiSummary?: string;
+  confidenceScore?: number;
 }
 
-export function ChatInterface({ userContext }: ChatInterfaceProps) {
+interface ChatInterfaceProps {
+  userContext?: IntakeFormData | null;
+  visaContext?: VisaContext | null;
+}
+
+export function ChatInterface({
+  userContext,
+  visaContext,
+}: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    {
+
+  // Build initial welcome message based on context
+  const getWelcomeMessage = (): Message => {
+    if (visaContext) {
+      return {
+        id: "welcome",
+        role: "assistant",
+        content: `Hello! I see you're interested in the **${
+          visaContext.name
+        }** for ${visaContext.country}. 
+
+${visaContext.aiSummary ? `Here's what I know: ${visaContext.aiSummary}` : ""}
+
+I can help you with:
+• Eligibility requirements and documents needed
+• Application process and timeline
+• Fees and costs breakdown
+• Tips for a successful application
+• Comparison with alternative visas
+
+What would you like to know about this visa?`,
+      };
+    }
+
+    return {
       id: "welcome",
       role: "assistant",
       content:
         "Hello! I'm your VisaPath AI assistant. I can help you understand visa requirements, compare pathways, and answer any questions about your immigration journey. How can I help you today?",
-    },
-  ]);
+    };
+  };
+
+  const [messages, setMessages] = useState<Message[]>([getWelcomeMessage()]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Update welcome message when visa context changes
+  useEffect(() => {
+    if (visaContext) {
+      setMessages([getWelcomeMessage()]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visaContext?.code]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -66,6 +122,7 @@ export function ChatInterface({ userContext }: ChatInterfaceProps) {
             content: m.content,
           })),
           userContext,
+          visaContext, // Pass visa context to API
         }),
       });
 
@@ -122,12 +179,26 @@ export function ChatInterface({ userContext }: ChatInterfaceProps) {
     });
   };
 
-  const suggestedQuestions = [
-    "What visa options do I have for Germany?",
-    "How long does the EU Blue Card take?",
-    "What documents do I need for a work visa?",
-    "Compare UK vs Netherlands visas",
-  ];
+  // Build suggested questions based on context
+  const getSuggestedQuestions = (): string[] => {
+    if (visaContext) {
+      return [
+        `What documents do I need for the ${visaContext.name}?`,
+        `How long does ${visaContext.name} processing take?`,
+        `What are the main requirements for this visa?`,
+        `Are there faster alternatives to this visa?`,
+      ];
+    }
+
+    return [
+      "What visa options do I have for Germany?",
+      "How long does the EU Blue Card take?",
+      "What documents do I need for a work visa?",
+      "Compare UK vs Netherlands visas",
+    ];
+  };
+
+  const suggestedQuestions = getSuggestedQuestions();
 
   const handleSuggestionClick = (question: string) => {
     setInput(question);
@@ -135,6 +206,26 @@ export function ChatInterface({ userContext }: ChatInterfaceProps) {
 
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col">
+      {/* Visa Context Banner */}
+      {visaContext && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <SparklesIcon className="h-5 w-5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">
+              Discussing: {visaContext.name}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {visaContext.country} • {visaContext.category} visa
+            </p>
+          </div>
+          {visaContext.confidenceScore && (
+            <Badge variant="outline" className="shrink-0">
+              {visaContext.confidenceScore}% verified
+            </Badge>
+          )}
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-4">
         <div className="space-y-4">
@@ -188,7 +279,11 @@ export function ChatInterface({ userContext }: ChatInterfaceProps) {
         <Input
           value={input}
           onChange={handleInputChange}
-          placeholder="Ask about visa requirements, timelines, costs..."
+          placeholder={
+            visaContext
+              ? `Ask about ${visaContext.name}...`
+              : "Ask about visa requirements, timelines, costs..."
+          }
           disabled={isLoading}
           className="flex-1"
         />

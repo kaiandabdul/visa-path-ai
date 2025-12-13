@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     const {
       messages,
       userContext,
+      visaContext, // Add visa context for context-aware conversations
       userId,
       sessionId,
       pathwayId,
@@ -73,15 +74,52 @@ export async function POST(req: NextRequest) {
     }
 
     // Build context-aware system prompt
-    const systemPrompt =
-      Object.keys(enrichedContext).length > 0
-        ? `${CHAT_SYSTEM_PROMPT}
+    let systemPrompt = CHAT_SYSTEM_PROMPT;
 
-User Context:
+    // Add visa context if provided (user clicked "Ask AI about this visa")
+    if (visaContext) {
+      systemPrompt += `
+
+CURRENT VISA CONTEXT:
+The user is asking about a specific visa they were viewing:
+- Visa Code: ${visaContext.code}
+- Visa Name: ${visaContext.name}
+- Country: ${visaContext.country}
+- Category: ${visaContext.category}
+${visaContext.description ? `- Description: ${visaContext.description}` : ""}
+${
+  visaContext.processingTimeAvg
+    ? `- Average Processing Time: ${visaContext.processingTimeAvg} days`
+    : ""
+}
+${
+  visaContext.applicationFee
+    ? `- Application Fee: ${visaContext.applicationFee} ${
+        visaContext.currency || ""
+      }`
+    : ""
+}
+${visaContext.aiSummary ? `- Summary: ${visaContext.aiSummary}` : ""}
+${
+  visaContext.requirements?.length
+    ? `- Key Requirements: ${visaContext.requirements
+        .map((r: { name: string }) => r.name)
+        .join(", ")}`
+    : ""
+}
+
+Focus your answers on this specific visa. If the user asks about other visas, you can compare them to this one.`;
+    }
+
+    // Add user profile context if available
+    if (Object.keys(enrichedContext).length > 0) {
+      systemPrompt += `
+
+USER CONTEXT:
 ${JSON.stringify(enrichedContext, null, 2)}
 
-Use this context to provide personalized, relevant advice about their visa options. Reference their specific profile details when answering questions.`
-        : CHAT_SYSTEM_PROMPT;
+Use this context to provide personalized, relevant advice about their visa options. Reference their specific profile details when answering questions.`;
+    }
 
     // Stream the response using AI SDK v6
     const result = streamText({
