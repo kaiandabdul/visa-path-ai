@@ -5,12 +5,14 @@ export const MODELS = {
   CLAUDE_SONNET: "anthropic/claude-sonnet-4.5" as const,
   CLAUDE_HAIKU: "anthropic/claude-haiku-4.5" as const,
   GEMINI_PRO: "google/gemini-3-pro-preview" as const,
+  GEMINI_FLASH: "google/gemini-2.0-flash" as const, // For vision/document scanning
 } as const;
 
 // Model string for different use cases
 export const claudeModel = MODELS.CLAUDE_SONNET;
 export const claudeHaikuModel = MODELS.CLAUDE_HAIKU;
 export const geminiModel = MODELS.GEMINI_PRO;
+export const geminiFlashModel = MODELS.GEMINI_FLASH;
 
 // Default model for general use
 export const defaultModel = claudeModel;

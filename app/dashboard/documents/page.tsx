@@ -354,6 +354,7 @@ export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [scanningProgress, setScanningProgress] = useState<string>("");
   const [dragOver, setDragOver] = useState(false);
   const [editingDoc, setEditingDoc] = useState<Document | null>(null);
   const [editDetails, setEditDetails] = useState<DocumentDetails>({});
@@ -392,42 +393,139 @@ export default function DocumentsPage() {
     if (files.length > 0) await uploadFiles(files);
   };
 
+  // Scan document with AI and extract data
+  const scanDocumentWithAI = async (
+    file: File,
+    suggestedType: string
+  ): Promise<{
+    type: string;
+    details: DocumentDetails;
+    summary: string;
+    confidence: number;
+  }> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", suggestedType);
+
+      const response = await fetch("/api/documents/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Scan failed");
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const { documentType, extractedData, summary, confidence } =
+          result.data;
+
+        // Map extracted data to our DocumentDetails format
+        const details: DocumentDetails = {};
+        if (extractedData) {
+          if (extractedData.fullName) details.fullName = extractedData.fullName;
+          if (extractedData.nationality)
+            details.nationality = extractedData.nationality;
+          if (extractedData.passportNumber)
+            details.passportNumber = extractedData.passportNumber;
+          if (extractedData.dateOfBirth)
+            details.dateOfBirth = extractedData.dateOfBirth;
+          if (extractedData.expiryDate)
+            details.expiryDate = extractedData.expiryDate;
+          if (extractedData.degreeType)
+            details.degreeType = extractedData.degreeType;
+          if (extractedData.fieldOfStudy)
+            details.fieldOfStudy = extractedData.fieldOfStudy;
+          if (extractedData.institution)
+            details.institution = extractedData.institution;
+          if (extractedData.graduationDate)
+            details.graduationDate = extractedData.graduationDate;
+          if (extractedData.currentTitle)
+            details.currentTitle = extractedData.currentTitle;
+          if (extractedData.yearsExperience)
+            details.yearsExperience = extractedData.yearsExperience;
+          if (extractedData.skills) details.skills = extractedData.skills;
+          if (extractedData.testType) details.testType = extractedData.testType;
+          if (extractedData.overallScore)
+            details.overallScore = extractedData.overallScore;
+          if (extractedData.testDate) details.testDate = extractedData.testDate;
+          if (extractedData.bankName) details.bankName = extractedData.bankName;
+          if (extractedData.accountBalance)
+            details.accountBalance = extractedData.accountBalance;
+          if (extractedData.currency) details.currency = extractedData.currency;
+        }
+
+        return {
+          type: documentType || suggestedType,
+          details,
+          summary: summary || "Document scanned successfully",
+          confidence: confidence || 0,
+        };
+      }
+
+      throw new Error("Invalid response");
+    } catch (error) {
+      console.error("AI scan failed:", error);
+      return {
+        type: suggestedType,
+        details: {},
+        summary: "Could not auto-scan. Please enter details manually.",
+        confidence: 0,
+      };
+    }
+  };
+
   const uploadFiles = async (files: File[]) => {
     setIsUploading(true);
     const newDocs: Document[] = [];
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       const classifiedType = classifyDocument(file.name);
-      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const config = documentTypeConfig[classifiedType];
+      setScanningProgress(
+        `Scanning ${file.name} with AI... (${i + 1}/${files.length})`
+      );
+
+      // Call AI to scan and extract data
+      const scanResult = await scanDocumentWithAI(file, classifiedType);
+
+      const config = documentTypeConfig[scanResult.type];
       const typeName = config?.name || "Other Document";
+
+      const hasDetails = Object.values(scanResult.details).some(
+        (v) => v && v.toString().trim() !== ""
+      );
 
       const newDoc: Document = {
         id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: classifiedType,
+        type: scanResult.type,
         fileName: file.name,
         fileUrl: URL.createObjectURL(file),
         fileSize: file.size,
         mimeType: file.type,
-        status: "pending_details",
-        aiAnalysis: `Document classified as "${typeName}". Please add details for AI assistance.`,
-        details: {},
+        status: hasDetails ? "completed" : "pending_details",
+        aiAnalysis: scanResult.summary,
+        details: scanResult.details,
         createdAt: new Date().toISOString(),
       };
 
       newDocs.push(newDoc);
 
-      // Open edit dialog for the first document
+      // Open edit dialog so user can review/edit the extracted data
       if (newDocs.length === 1) {
         setEditingDoc(newDoc);
-        setEditDetails({});
+        setEditDetails(scanResult.details);
       }
     }
 
     const updatedDocs = [...documents, ...newDocs];
     saveDocuments(updatedDocs);
     setIsUploading(false);
+    setScanningProgress("");
   };
 
   const handleDelete = (docId: string) => {
@@ -555,7 +653,12 @@ export default function DocumentsPage() {
           {isUploading ? (
             <>
               <Spinner className="size-10 mb-4" />
-              <p className="text-muted-foreground">Processing documents...</p>
+              <p className="font-medium mb-1">
+                {scanningProgress || "Processing documents..."}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                AI is extracting data from your document
+              </p>
             </>
           ) : (
             <>
@@ -567,7 +670,7 @@ export default function DocumentsPage() {
                 Drop files here or click to upload
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                Add document details so AI can reference them in chat
+                AI will automatically scan and extract document details
               </p>
               <Button variant="outline" size="sm">
                 <UploadIcon className="mr-2 h-4 w-4" />
