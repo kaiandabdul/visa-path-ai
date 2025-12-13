@@ -122,7 +122,7 @@ ${JSON.stringify(enrichedContext, null, 2)}
 Use this context to provide personalized, relevant advice about their visa options. Reference their specific profile details when answering questions.`;
     }
 
-    // Add uploaded documents context if available
+    // Add uploaded documents context if available (WITH FULL DETAILS)
     if (
       userDocuments &&
       Array.isArray(userDocuments) &&
@@ -130,18 +130,39 @@ Use this context to provide personalized, relevant advice about their visa optio
     ) {
       const docSummary = userDocuments
         .map(
-          (doc: { type: string; fileName: string; status: string }) =>
-            `- ${doc.type}: ${doc.fileName} (${doc.status})`
+          (doc: {
+            type: string;
+            fileName: string;
+            status: string;
+            details?: Record<string, string>;
+          }) => {
+            let summary = `\n### ${doc.type.toUpperCase()}: ${doc.fileName}`;
+            summary += `\nStatus: ${doc.status}`;
+
+            // Add document details if available
+            if (doc.details && Object.keys(doc.details).length > 0) {
+              const detailsStr = Object.entries(doc.details)
+                .filter(([, value]) => value && value.trim() !== "")
+                .map(([key, value]) => `  - ${key}: ${value}`)
+                .join("\n");
+
+              if (detailsStr) {
+                summary += `\nDetails:\n${detailsStr}`;
+              }
+            }
+
+            return summary;
+          }
         )
         .join("\n");
 
       systemPrompt += `
 
-UPLOADED DOCUMENTS:
-The user has uploaded the following documents that you can reference:
+UPLOADED DOCUMENTS (with user-provided details):
+The user has uploaded the following documents. Use these details to provide specific, personalized advice.
 ${docSummary}
 
-When discussing visa requirements, you can mention which of their documents might be relevant or if any are missing.`;
+IMPORTANT: You now have access to the actual document details the user entered. Reference specific information (like passport nationality, expiry date, degree type, language scores) when answering questions about their visa eligibility.`;
     }
 
     // Stream the response using AI SDK v6

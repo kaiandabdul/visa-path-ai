@@ -6,6 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   CloudUploadIcon,
   FileTextIcon,
@@ -19,8 +36,35 @@ import {
   ClockIcon,
   SparklesIcon,
   UploadIcon,
+  PencilIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface DocumentDetails {
+  // Passport
+  fullName?: string;
+  nationality?: string;
+  passportNumber?: string;
+  dateOfBirth?: string;
+  expiryDate?: string;
+  // Degree
+  degreeType?: string;
+  fieldOfStudy?: string;
+  institution?: string;
+  graduationDate?: string;
+  // Resume
+  currentTitle?: string;
+  yearsExperience?: string;
+  skills?: string;
+  // Language
+  testType?: string;
+  overallScore?: string;
+  testDate?: string;
+  // Financial
+  bankName?: string;
+  accountBalance?: string;
+  currency?: string;
+}
 
 interface Document {
   id: string;
@@ -31,7 +75,7 @@ interface Document {
   mimeType: string | null;
   status: string;
   aiAnalysis: string | null;
-  extractedData?: Record<string, unknown>;
+  details?: DocumentDetails;
   createdAt: string;
 }
 
@@ -43,6 +87,12 @@ const documentTypeConfig: Record<
     required: boolean;
     icon: React.ElementType;
     keywords: string[];
+    fields: Array<{
+      key: keyof DocumentDetails;
+      label: string;
+      type: string;
+      placeholder: string;
+    }>;
   }
 > = {
   passport: {
@@ -51,6 +101,38 @@ const documentTypeConfig: Record<
     required: true,
     icon: FileTextIcon,
     keywords: ["passport", "travel document", "identity", "citizenship"],
+    fields: [
+      {
+        key: "fullName",
+        label: "Full Name",
+        type: "text",
+        placeholder: "As shown on passport",
+      },
+      {
+        key: "nationality",
+        label: "Nationality",
+        type: "text",
+        placeholder: "e.g., United States",
+      },
+      {
+        key: "passportNumber",
+        label: "Passport Number",
+        type: "text",
+        placeholder: "e.g., 123456789",
+      },
+      {
+        key: "dateOfBirth",
+        label: "Date of Birth",
+        type: "date",
+        placeholder: "",
+      },
+      {
+        key: "expiryDate",
+        label: "Expiry Date",
+        type: "date",
+        placeholder: "",
+      },
+    ],
   },
   degree: {
     name: "Educational Degree",
@@ -67,6 +149,38 @@ const documentTypeConfig: Record<
       "university",
       "college",
     ],
+    fields: [
+      {
+        key: "fullName",
+        label: "Name on Certificate",
+        type: "text",
+        placeholder: "Your full name",
+      },
+      {
+        key: "degreeType",
+        label: "Degree Type",
+        type: "text",
+        placeholder: "e.g., Bachelor of Science",
+      },
+      {
+        key: "fieldOfStudy",
+        label: "Field of Study",
+        type: "text",
+        placeholder: "e.g., Computer Science",
+      },
+      {
+        key: "institution",
+        label: "Institution",
+        type: "text",
+        placeholder: "University name",
+      },
+      {
+        key: "graduationDate",
+        label: "Graduation Date",
+        type: "date",
+        placeholder: "",
+      },
+    ],
   },
   resume: {
     name: "Resume / CV",
@@ -80,6 +194,32 @@ const documentTypeConfig: Record<
       "work experience",
       "employment",
     ],
+    fields: [
+      {
+        key: "fullName",
+        label: "Full Name",
+        type: "text",
+        placeholder: "Your full name",
+      },
+      {
+        key: "currentTitle",
+        label: "Current Job Title",
+        type: "text",
+        placeholder: "e.g., Software Engineer",
+      },
+      {
+        key: "yearsExperience",
+        label: "Years of Experience",
+        type: "text",
+        placeholder: "e.g., 5 years",
+      },
+      {
+        key: "skills",
+        label: "Key Skills",
+        type: "text",
+        placeholder: "e.g., JavaScript, Python, AWS",
+      },
+    ],
   },
   transcript: {
     name: "Transcripts",
@@ -87,6 +227,26 @@ const documentTypeConfig: Record<
     required: false,
     icon: FileTextIcon,
     keywords: ["transcript", "grades", "academic record", "gpa"],
+    fields: [
+      {
+        key: "institution",
+        label: "Institution",
+        type: "text",
+        placeholder: "University name",
+      },
+      {
+        key: "fieldOfStudy",
+        label: "Program/Major",
+        type: "text",
+        placeholder: "e.g., Computer Science",
+      },
+      {
+        key: "overallScore",
+        label: "GPA / Grade",
+        type: "text",
+        placeholder: "e.g., 3.8/4.0",
+      },
+    ],
   },
   language: {
     name: "Language Certificate",
@@ -102,6 +262,33 @@ const documentTypeConfig: Record<
       "certificate",
       "test score",
     ],
+    fields: [
+      {
+        key: "fullName",
+        label: "Candidate Name",
+        type: "text",
+        placeholder: "Name on certificate",
+      },
+      {
+        key: "testType",
+        label: "Test Type",
+        type: "text",
+        placeholder: "e.g., IELTS Academic",
+      },
+      {
+        key: "overallScore",
+        label: "Overall Score",
+        type: "text",
+        placeholder: "e.g., 7.5",
+      },
+      { key: "testDate", label: "Test Date", type: "date", placeholder: "" },
+      {
+        key: "expiryDate",
+        label: "Expiry Date",
+        type: "date",
+        placeholder: "",
+      },
+    ],
   },
   financial: {
     name: "Financial Documents",
@@ -109,14 +296,33 @@ const documentTypeConfig: Record<
     required: false,
     icon: ShieldCheckIcon,
     keywords: ["bank", "statement", "financial", "funds", "account", "balance"],
+    fields: [
+      {
+        key: "bankName",
+        label: "Bank Name",
+        type: "text",
+        placeholder: "e.g., Chase Bank",
+      },
+      {
+        key: "accountBalance",
+        label: "Account Balance",
+        type: "text",
+        placeholder: "e.g., 50,000",
+      },
+      {
+        key: "currency",
+        label: "Currency",
+        type: "text",
+        placeholder: "e.g., USD",
+      },
+    ],
   },
 };
 
-// AI-based document classification using filename and content hints
-function classifyDocument(fileName: string, mimeType: string): string {
+// AI-based document classification using filename
+function classifyDocument(fileName: string): string {
   const lowerName = fileName.toLowerCase();
 
-  // Check each document type's keywords
   for (const [type, config] of Object.entries(documentTypeConfig)) {
     for (const keyword of config.keywords) {
       if (lowerName.includes(keyword.toLowerCase())) {
@@ -125,31 +331,22 @@ function classifyDocument(fileName: string, mimeType: string): string {
     }
   }
 
-  // Fallback classifications based on common patterns
-  if (lowerName.includes("pass") || lowerName.includes("travel")) {
+  if (lowerName.includes("pass") || lowerName.includes("travel"))
     return "passport";
-  }
-  if (lowerName.includes("cv") || lowerName.includes("resume")) {
-    return "resume";
-  }
+  if (lowerName.includes("cv") || lowerName.includes("resume")) return "resume";
   if (
     lowerName.includes("cert") ||
     lowerName.includes("diploma") ||
     lowerName.includes("degree")
-  ) {
+  )
     return "degree";
-  }
-  if (lowerName.includes("bank") || lowerName.includes("statement")) {
+  if (lowerName.includes("bank") || lowerName.includes("statement"))
     return "financial";
-  }
-  if (lowerName.includes("ielts") || lowerName.includes("toefl")) {
+  if (lowerName.includes("ielts") || lowerName.includes("toefl"))
     return "language";
-  }
-  if (lowerName.includes("grade") || lowerName.includes("transcript")) {
+  if (lowerName.includes("grade") || lowerName.includes("transcript"))
     return "transcript";
-  }
 
-  // Default to 'other' if can't classify
   return "other";
 }
 
@@ -158,9 +355,10 @@ export default function DocumentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<Document | null>(null);
+  const [editDetails, setEditDetails] = useState<DocumentDetails>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch documents from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("userDocuments");
     if (stored) {
@@ -169,7 +367,6 @@ export default function DocumentsPage() {
     setIsLoading(false);
   }, []);
 
-  // Save documents to localStorage (also makes them available for eligibility/chat)
   const saveDocuments = (docs: Document[]) => {
     setDocuments(docs);
     localStorage.setItem("userDocuments", JSON.stringify(docs));
@@ -184,35 +381,24 @@ export default function DocumentsPage() {
   ) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
-
     await uploadFiles(Array.from(files));
-
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleDrop = async (event: React.DragEvent) => {
     event.preventDefault();
     setDragOver(false);
     const files = Array.from(event.dataTransfer.files);
-    if (files.length > 0) {
-      await uploadFiles(files);
-    }
+    if (files.length > 0) await uploadFiles(files);
   };
 
   const uploadFiles = async (files: File[]) => {
     setIsUploading(true);
-
     const newDocs: Document[] = [];
 
     for (const file of files) {
-      // AI-classify the document based on filename
-      const classifiedType = classifyDocument(file.name, file.type);
-
-      // Simulate processing delay for "AI analysis"
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const classifiedType = classifyDocument(file.name);
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const config = documentTypeConfig[classifiedType];
       const typeName = config?.name || "Other Document";
@@ -224,18 +410,19 @@ export default function DocumentsPage() {
         fileUrl: URL.createObjectURL(file),
         fileSize: file.size,
         mimeType: file.type,
-        status: "completed",
-        aiAnalysis: `Document "${file.name}" has been classified as "${typeName}" and verified successfully.`,
-        extractedData: {
-          originalName: file.name,
-          classifiedAs: classifiedType,
-          uploadedAt: new Date().toISOString(),
-          available: true, // Flag to indicate this doc is available for AI analysis
-        },
+        status: "pending_details",
+        aiAnalysis: `Document classified as "${typeName}". Please add details for AI assistance.`,
+        details: {},
         createdAt: new Date().toISOString(),
       };
 
       newDocs.push(newDoc);
+
+      // Open edit dialog for the first document
+      if (newDocs.length === 1) {
+        setEditingDoc(newDoc);
+        setEditDetails({});
+      }
     }
 
     const updatedDocs = [...documents, ...newDocs];
@@ -248,44 +435,66 @@ export default function DocumentsPage() {
     saveDocuments(updatedDocs);
   };
 
+  const openEditDialog = (doc: Document) => {
+    setEditingDoc(doc);
+    setEditDetails(doc.details || {});
+  };
+
+  const saveDetails = () => {
+    if (!editingDoc) return;
+
+    const hasDetails = Object.values(editDetails).some(
+      (v) => v && v.toString().trim() !== ""
+    );
+
+    const updatedDocs = documents.map((d) => {
+      if (d.id === editingDoc.id) {
+        return {
+          ...d,
+          details: editDetails,
+          status: hasDetails ? "completed" : "pending_details",
+          aiAnalysis: hasDetails
+            ? `Document verified with details: ${Object.entries(editDetails)
+                .filter(([, v]) => v)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(", ")}`
+            : d.aiAnalysis,
+        };
+      }
+      return d;
+    });
+
+    saveDocuments(updatedDocs);
+    setEditingDoc(null);
+    setEditDetails({});
+  };
+
   const handleReclassify = (docId: string, newType: string) => {
     const updatedDocs = documents.map((d) => {
       if (d.id === docId) {
-        const config = documentTypeConfig[newType];
-        return {
-          ...d,
-          type: newType,
-          aiAnalysis: `Document reclassified as "${config?.name || newType}".`,
-        };
+        return { ...d, type: newType, details: {} };
       }
       return d;
     });
     saveDocuments(updatedDocs);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return (
-          <Badge variant="default" className="bg-green-500">
-            <CheckCircleIcon className="mr-1 h-3 w-3" /> Verified
-          </Badge>
-        );
-      case "processing":
-        return (
-          <Badge variant="secondary">
-            <ClockIcon className="mr-1 h-3 w-3" /> Processing
-          </Badge>
-        );
-      case "error":
-        return (
-          <Badge variant="destructive">
-            <XCircleIcon className="mr-1 h-3 w-3" /> Error
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">Pending</Badge>;
+  const getStatusBadge = (status: string, hasDetails: boolean) => {
+    if (status === "completed" && hasDetails) {
+      return (
+        <Badge variant="default" className="bg-green-500">
+          <CheckCircleIcon className="mr-1 h-3 w-3" /> Verified
+        </Badge>
+      );
     }
+    if (status === "pending_details") {
+      return (
+        <Badge variant="secondary" className="bg-orange-500/20 text-orange-500">
+          <ClockIcon className="mr-1 h-3 w-3" /> Needs Details
+        </Badge>
+      );
+    }
+    return <Badge variant="outline">Uploaded</Badge>;
   };
 
   const formatFileSize = (bytes: number) => {
@@ -294,16 +503,17 @@ export default function DocumentsPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Calculate progress based on required documents
   const requiredTypes = Object.entries(documentTypeConfig)
     .filter(([, config]) => config.required)
     .map(([type]) => type);
 
-  const uploadedRequiredTypes = new Set(
-    documents.filter((d) => requiredTypes.includes(d.type)).map((d) => d.type)
+  const completedRequiredTypes = new Set(
+    documents
+      .filter((d) => requiredTypes.includes(d.type) && d.status === "completed")
+      .map((d) => d.type)
   );
   const requiredProgress =
-    (uploadedRequiredTypes.size / requiredTypes.length) * 100;
+    (completedRequiredTypes.size / requiredTypes.length) * 100;
 
   if (isLoading) {
     return (
@@ -314,12 +524,14 @@ export default function DocumentsPage() {
     );
   }
 
+  const editConfig = editingDoc ? documentTypeConfig[editingDoc.type] : null;
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Document Management</h1>
         <p className="text-muted-foreground">
-          Upload your documents for AI-powered analysis and verification
+          Upload your documents and add details for AI-powered assistance
         </p>
       </div>
 
@@ -343,9 +555,7 @@ export default function DocumentsPage() {
           {isUploading ? (
             <>
               <Spinner className="size-10 mb-4" />
-              <p className="text-muted-foreground">
-                Analyzing documents with AI...
-              </p>
+              <p className="text-muted-foreground">Processing documents...</p>
             </>
           ) : (
             <>
@@ -357,7 +567,7 @@ export default function DocumentsPage() {
                 Drop files here or click to upload
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                AI will automatically classify your documents
+                Add document details so AI can reference them in chat
               </p>
               <Button variant="outline" size="sm">
                 <UploadIcon className="mr-2 h-4 w-4" />
@@ -376,33 +586,32 @@ export default function DocumentsPage() {
         </CardContent>
       </Card>
 
-      {/* Progress Overview */}
+      {/* Progress */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Upload Progress</CardTitle>
+          <CardTitle className="text-base">Document Progress</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-muted-foreground">
-              {uploadedRequiredTypes.size} of {requiredTypes.length} required
-              documents uploaded
+              {completedRequiredTypes.size} of {requiredTypes.length} required
+              documents verified
             </span>
             <span className="font-medium">{Math.round(requiredProgress)}%</span>
           </div>
           <Progress value={requiredProgress} className="h-2" />
-          {uploadedRequiredTypes.size < requiredTypes.length && (
+          {documents.filter((d) => d.status === "pending_details").length >
+            0 && (
             <p className="text-sm text-orange-500 mt-2">
-              ⚠️ Missing required:{" "}
-              {requiredTypes
-                .filter((t) => !uploadedRequiredTypes.has(t))
-                .map((t) => documentTypeConfig[t].name)
-                .join(", ")}
+              ⚠️{" "}
+              {documents.filter((d) => d.status === "pending_details").length}{" "}
+              document(s) need details added
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Documents by Type */}
+      {/* Documents */}
       <div>
         <h2 className="mb-4 text-lg font-semibold">Your Documents</h2>
 
@@ -425,11 +634,11 @@ export default function DocumentsPage() {
               if (docsOfType.length === 0) return null;
 
               return (
-                <Card key={type} className="border-green-500/30 bg-green-50/5">
+                <Card key={type} className="border-border">
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20">
-                        <Icon className="h-4 w-4 text-green-500" />
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                        <Icon className="h-4 w-4 text-primary" />
                       </div>
                       <div>
                         <CardTitle className="text-sm font-medium">
@@ -444,36 +653,53 @@ export default function DocumentsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {docsOfType.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-2 rounded-md bg-background/80"
-                      >
-                        <div className="flex-1 min-w-0 mr-2">
-                          {getStatusBadge(doc.status)}
-                          <p className="text-xs text-muted-foreground truncate mt-1">
-                            {doc.fileName} ({formatFileSize(doc.fileSize)})
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(doc.id);
-                          }}
+                    {docsOfType.map((doc) => {
+                      const hasDetails =
+                        doc.details &&
+                        Object.values(doc.details).some((v) => v);
+                      return (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-2 rounded-md bg-muted/50"
                         >
-                          <TrashIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex-1 min-w-0 mr-2">
+                            {getStatusBadge(doc.status, !!hasDetails)}
+                            <p className="text-xs text-muted-foreground truncate mt-1">
+                              {doc.fileName} ({formatFileSize(doc.fileSize)})
+                            </p>
+                            {hasDetails && doc.details?.fullName && (
+                              <p className="text-xs text-primary mt-0.5">
+                                {doc.details.fullName}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => openEditDialog(doc)}
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDelete(doc.id)}
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </CardContent>
                 </Card>
               );
             })}
 
-            {/* Show unclassified documents if any */}
+            {/* Other/unclassified documents */}
             {documents.filter((d) => d.type === "other").length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
@@ -485,39 +711,23 @@ export default function DocumentsPage() {
                   {documents
                     .filter((d) => d.type === "other")
                     .map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-2 rounded-md bg-muted/50"
-                      >
-                        <div className="flex-1 min-w-0 mr-2">
-                          {getStatusBadge(doc.status)}
-                          <p className="text-xs text-muted-foreground truncate mt-1">
-                            {doc.fileName}
-                          </p>
-                          <div className="flex gap-1 mt-2 flex-wrap">
-                            {Object.entries(documentTypeConfig).map(
-                              ([type, config]) => (
-                                <Button
-                                  key={type}
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 text-xs"
-                                  onClick={() => handleReclassify(doc.id, type)}
-                                >
-                                  {config.name}
-                                </Button>
-                              )
-                            )}
-                          </div>
+                      <div key={doc.id} className="p-2 rounded-md bg-muted/50">
+                        <p className="text-xs truncate">{doc.fileName}</p>
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {Object.entries(documentTypeConfig).map(
+                            ([type, config]) => (
+                              <Button
+                                key={type}
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => handleReclassify(doc.id, type)}
+                              >
+                                {config.name}
+                              </Button>
+                            )
+                          )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                          onClick={() => handleDelete(doc.id)}
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </Button>
                       </div>
                     ))}
                 </CardContent>
@@ -527,32 +737,107 @@ export default function DocumentsPage() {
         )}
       </div>
 
-      {/* Document Tips */}
+      {/* Tips */}
       <Card className="bg-muted/30">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Document Tips</CardTitle>
+          <CardTitle className="text-base">How Documents Help AI</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
-              AI automatically classifies your documents
+              AI Chat can see your document details
             </div>
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
-              Documents are used in eligibility analysis
+              Passport info helps with visa eligibility
             </div>
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
-              AI Chat can reference your uploaded docs
+              Degree details help with work visa points
             </div>
             <div className="flex items-center gap-2">
               <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
-              Maximum file size: 10MB per document
+              Language scores affect visa options
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Details Dialog */}
+      <Dialog
+        open={!!editingDoc}
+        onOpenChange={(open) => !open && setEditingDoc(null)}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add {editConfig?.name} Details</DialogTitle>
+            <DialogDescription>
+              Enter details from your document so AI can reference them when
+              answering questions.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editConfig && (
+            <div className="grid gap-4 py-4">
+              {editConfig.fields.map((field) => (
+                <div key={field.key} className="grid gap-2">
+                  <Label htmlFor={field.key}>{field.label}</Label>
+                  <Input
+                    id={field.key}
+                    type={field.type}
+                    placeholder={field.placeholder}
+                    value={(editDetails[field.key] as string) || ""}
+                    onChange={(e) =>
+                      setEditDetails({
+                        ...editDetails,
+                        [field.key]: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              ))}
+
+              {/* Document type selector */}
+              <div className="grid gap-2">
+                <Label>Document Type</Label>
+                <Select
+                  value={editingDoc?.type}
+                  onValueChange={(value) => {
+                    if (editingDoc) {
+                      const updatedDocs = documents.map((d) =>
+                        d.id === editingDoc.id ? { ...d, type: value } : d
+                      );
+                      saveDocuments(updatedDocs);
+                      setEditingDoc({ ...editingDoc, type: value });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(documentTypeConfig).map(
+                      ([type, config]) => (
+                        <SelectItem key={type} value={type}>
+                          {config.name}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDoc(null)}>
+              Cancel
+            </Button>
+            <Button onClick={saveDetails}>Save Details</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -80,21 +80,34 @@ What would you like to know about this visa?`,
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userDocuments, setUserDocuments] = useState<
-    Array<{ type: string; fileName: string; status: string }>
+    Array<{
+      type: string;
+      fileName: string;
+      status: string;
+      details?: Record<string, string>;
+    }>
   >([]);
 
-  // Load user documents from localStorage
+  // Load user documents from localStorage (including details)
   useEffect(() => {
     const stored = localStorage.getItem("userDocuments");
     if (stored) {
       try {
         const docs = JSON.parse(stored);
         setUserDocuments(
-          docs.map((d: { type: string; fileName: string; status: string }) => ({
-            type: d.type,
-            fileName: d.fileName,
-            status: d.status,
-          }))
+          docs.map(
+            (d: {
+              type: string;
+              fileName: string;
+              status: string;
+              details?: Record<string, string>;
+            }) => ({
+              type: d.type,
+              fileName: d.fileName,
+              status: d.status,
+              details: d.details || {},
+            })
+          )
         );
       } catch (e) {
         console.error("Failed to load user documents:", e);
