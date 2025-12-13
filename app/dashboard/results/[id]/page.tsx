@@ -3,130 +3,158 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeftIcon,
+  ArrowRightIcon,
+  StarIcon,
+  ArchiveIcon,
+  MessageSquareIcon,
   CalendarIcon,
-  DollarSignIcon,
   CheckCircleIcon,
   AlertTriangleIcon,
   ClockIcon,
-  FileTextIcon,
-  MessageSquareIcon,
+  DollarSignIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TARGET_COUNTRIES } from "@/lib/utils/constants";
+import { formatDistanceToNow, format } from "date-fns";
 
-interface PathwayDetails {
-  id: string;
+interface PathwayResult {
+  visaTypeCode: string;
   eligibilityScore: number;
   successProbability: number;
   estimatedProcessingTime: number;
-  totalCost: number;
+  totalCostEstimate: number;
   reasoning: string;
   nextSteps: string[];
   riskFactors: string[];
-  status: string;
-  createdAt: string;
-  visaTypes: Array<{
-    visaType: {
-      id: string;
-      code: string;
-      name: string;
-      country: string;
-      category: string;
-      description: string;
-      processingTimeMin: number;
-      processingTimeMax: number;
-      processingTimeAvg: number;
-      applicationFee: number;
-      legalFee: number | null;
-      currency: string;
-      successRate: number;
-      salaryThreshold: number | null;
-      educationRequired: string | null;
-      languageRequirement: string | null;
-      requirements: Array<{ name: string; priority: string }>;
-    };
-  }>;
+  recommendationRank: number;
+  visaType: {
+    id: string;
+    code: string;
+    name: string;
+    country: string;
+    category: string;
+    processingTimeAvg: number;
+    applicationFee: number;
+    legalFee: number | null;
+    currency: string;
+    successRate: number;
+  } | null;
 }
 
-export default function PathwayDetailPage() {
+interface SessionDetail {
+  id: string;
+  status: string;
+  title: string | null;
+  targetCountries: string[];
+  pathwaysCount: number;
+  topPathwayCode: string | null;
+  topPathwayScore: number | null;
+  overallAssessment: string | null;
+  topRecommendation: string | null;
+  profileSnapshot: Record<string, unknown>;
+  pathways: PathwayResult[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function SessionDetailPage() {
   const params = useParams();
-  const pathwayId = params.id as string;
-  const [pathway, setPathway] = useState<PathwayDetails | null>(null);
+  const sessionId = params.id as string;
+
+  const [session, setSession] = useState<SessionDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPathways, setSelectedPathways] = useState<string[]>([]);
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
-    async function fetchPathway() {
+    async function fetchSession() {
       try {
-        const response = await fetch(`/api/pathways/${pathwayId}`);
-        if (!response.ok) throw new Error("Pathway not found");
+        const response = await fetch(`/api/analysis-sessions/${sessionId}`);
         const data = await response.json();
+
         if (data.success) {
-          setPathway(data.data);
+          setSession(data.data);
         } else {
           throw new Error(data.error);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load pathway");
+        setError(err instanceof Error ? err.message : "Failed to load session");
       } finally {
         setIsLoading(false);
       }
     }
 
-    if (pathwayId) {
-      fetchPathway();
+    if (sessionId) {
+      fetchSession();
     }
-  }, [pathwayId]);
+  }, [sessionId]);
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-500";
-    if (score >= 60) return "text-yellow-500";
-    return "text-red-500";
+  const handleUpdateStatus = async (newStatus: string) => {
+    try {
+      await fetch(`/api/analysis-sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      setSession((prev) => (prev ? { ...prev, status: newStatus } : prev));
+    } catch (err) {
+      console.error("Error updating session:", err);
+    }
+  };
+
+  const togglePathwaySelection = (code: string) => {
+    setSelectedPathways((prev) =>
+      prev.includes(code)
+        ? prev.filter((c) => c !== code)
+        : prev.length < 3
+        ? [...prev, code]
+        : prev
+    );
   };
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <Spinner className="size-8" />
-        <p className="text-muted-foreground">Loading pathway details...</p>
+        <p className="text-muted-foreground">Loading analysis results...</p>
       </div>
     );
   }
 
-  if (error || !pathway) {
+  if (error || !session) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertTriangleIcon className="mb-4 h-12 w-12 text-destructive" />
-        <h2 className="mb-2 text-xl font-semibold">Pathway Not Found</h2>
+        <h2 className="mb-2 text-xl font-semibold">Analysis Not Found</h2>
         <p className="mb-6 text-muted-foreground">
-          {error || "Unable to load pathway details"}
+          {error || "Unable to load this analysis"}
         </p>
         <Link href="/dashboard/results">
           <Button>
             <ArrowLeftIcon className="mr-2 h-4 w-4" />
-            Back to Results
+            Back to History
           </Button>
         </Link>
       </div>
     );
   }
 
-  const primaryVisa = pathway.visaTypes[0]?.visaType;
-  const country = TARGET_COUNTRIES.find((c) => c.code === primaryVisa?.country);
+  const getCountryFlag = (code: string) => {
+    const country = TARGET_COUNTRIES.find((c) => c.code === code);
+    return country?.flag || "🌍";
+  };
+
+  const sortedPathways = [...(session.pathways || [])].sort(
+    (a, b) => b.eligibilityScore - a.eligibilityScore
+  );
 
   return (
     <div className="space-y-6">
@@ -139,318 +167,227 @@ export default function PathwayDetailPage() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">{country?.flag}</span>
-            <h1 className="text-2xl font-bold">{primaryVisa?.name}</h1>
-            <Badge variant="secondary">{primaryVisa?.category}</Badge>
+            <h1 className="text-2xl font-bold">
+              {session.title ||
+                session.targetCountries
+                  .map(
+                    (c) =>
+                      TARGET_COUNTRIES.find((tc) => tc.code === c)?.name || c
+                  )
+                  .join(", ")}
+            </h1>
+            <Badge>{session.status}</Badge>
           </div>
-          <p className="text-muted-foreground">{primaryVisa?.description}</p>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <CalendarIcon className="h-3 w-3" />
+              {format(new Date(session.createdAt), "MMMM d, yyyy")}
+            </div>
+            <span>•</span>
+            <span>
+              {formatDistanceToNow(new Date(session.createdAt), {
+                addSuffix: true,
+              })}
+            </span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              handleUpdateStatus(
+                session.status === "starred" ? "active" : "starred"
+              )
+            }
+          >
+            <StarIcon
+              className={cn(
+                "h-4 w-4 mr-1",
+                session.status === "starred" &&
+                  "fill-yellow-400 text-yellow-400"
+              )}
+            />
+            {session.status === "starred" ? "Unstar" : "Star"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              handleUpdateStatus(
+                session.status === "archived" ? "active" : "archived"
+              )
+            }
+          >
+            <ArchiveIcon className="h-4 w-4 mr-1" />
+            {session.status === "archived" ? "Unarchive" : "Archive"}
+          </Button>
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <CheckCircleIcon className="h-4 w-4" />
-              Eligibility Score
+      {/* Overall Assessment */}
+      {session.overallAssessment && (
+        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <CardContent className="py-4">
+            <p className="text-sm leading-relaxed">
+              {session.overallAssessment}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Top Recommendation */}
+      {session.topRecommendation && (
+        <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <CheckCircleIcon className="h-5 w-5 text-green-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-green-800 dark:text-green-200">
+                  Top Recommendation
+                </p>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                  {session.topRecommendation}
+                </p>
+              </div>
             </div>
-            <p
-              className={cn(
-                "text-3xl font-bold",
-                getScoreColor(pathway.eligibilityScore)
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Compare Button */}
+      {selectedPathways.length >= 2 && (
+        <div className="flex items-center justify-between bg-muted p-3 rounded-lg">
+          <span className="text-sm text-muted-foreground">
+            {selectedPathways.length} pathways selected
+          </span>
+          <Button size="sm" onClick={() => setShowComparison(!showComparison)}>
+            {showComparison ? "Hide Comparison" : "Compare Selected"}
+          </Button>
+        </div>
+      )}
+
+      {/* Pathways Grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {sortedPathways.map((pathway, index) => (
+          <Card
+            key={pathway.visaTypeCode}
+            className={cn(
+              "cursor-pointer transition-all hover:shadow-md",
+              selectedPathways.includes(pathway.visaTypeCode) &&
+                "ring-2 ring-primary",
+              index === 0 && "md:col-span-2 border-primary"
+            )}
+            onClick={() => togglePathwaySelection(pathway.visaTypeCode)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">
+                    {getCountryFlag(pathway.visaType?.country || "")}
+                  </span>
+                  <div>
+                    <CardTitle className="text-lg">
+                      {pathway.visaType?.name || pathway.visaTypeCode}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {pathway.visaType?.category} visa
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div
+                    className={cn(
+                      "text-3xl font-bold",
+                      pathway.eligibilityScore >= 80
+                        ? "text-green-500"
+                        : pathway.eligibilityScore >= 60
+                        ? "text-yellow-500"
+                        : "text-red-500"
+                    )}
+                  >
+                    {pathway.eligibilityScore}%
+                  </div>
+                  <p className="text-xs text-muted-foreground">match</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Progress Bar */}
+              <Progress value={pathway.eligibilityScore} className="h-2" />
+
+              {/* Key Metrics */}
+              <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                <div className="bg-muted/50 rounded p-2">
+                  <ClockIcon className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="font-medium">
+                    {pathway.estimatedProcessingTime}d
+                  </p>
+                  <p className="text-xs text-muted-foreground">Processing</p>
+                </div>
+                <div className="bg-muted/50 rounded p-2">
+                  <DollarSignIcon className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="font-medium">
+                    ${pathway.totalCostEstimate?.toLocaleString() || "N/A"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Est. Cost</p>
+                </div>
+                <div className="bg-muted/50 rounded p-2">
+                  <CheckCircleIcon className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="font-medium">{pathway.successProbability}%</p>
+                  <p className="text-xs text-muted-foreground">Success</p>
+                </div>
+              </div>
+
+              {/* Reasoning */}
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {pathway.reasoning}
+              </p>
+
+              {/* Risk Factors */}
+              {pathway.riskFactors?.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {pathway.riskFactors.slice(0, 2).map((risk, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">
+                      <AlertTriangleIcon className="h-3 w-3 mr-1 text-yellow-500" />
+                      {risk}
+                    </Badge>
+                  ))}
+                </div>
               )}
-            >
-              {pathway.eligibilityScore}%
-            </p>
-            <Progress value={pathway.eligibilityScore} className="mt-2 h-2" />
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <ClockIcon className="h-4 w-4" />
-              Processing Time
-            </div>
-            <p className="text-3xl font-bold">
-              {pathway.estimatedProcessingTime}
-            </p>
-            <p className="text-sm text-muted-foreground">days estimated</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <DollarSignIcon className="h-4 w-4" />
-              Total Cost
-            </div>
-            <p className="text-3xl font-bold">
-              ${pathway.totalCost.toLocaleString()}
-            </p>
-            <p className="text-sm text-muted-foreground">estimated</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <CalendarIcon className="h-4 w-4" />
-              Success Rate
-            </div>
-            <p
-              className={cn(
-                "text-3xl font-bold",
-                getScoreColor(pathway.successProbability)
-              )}
-            >
-              {pathway.successProbability}%
-            </p>
-            <Progress value={pathway.successProbability} className="mt-2 h-2" />
-          </CardContent>
-        </Card>
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <Link
+                  href={`/dashboard/visa/${pathway.visaTypeCode}`}
+                  className="flex-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button variant="outline" size="sm" className="w-full">
+                    View Details
+                    <ArrowRightIcon className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link
+                  href={`/dashboard/chat?visa=${pathway.visaTypeCode}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button variant="secondary" size="sm">
+                    <MessageSquareIcon className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="requirements">Requirements</TabsTrigger>
-          <TabsTrigger value="costs">Cost Breakdown</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{pathway.reasoning}</p>
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                  Next Steps
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ol className="space-y-2">
-                  {pathway.nextSteps.map((step, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                        {i + 1}
-                      </span>
-                      <span className="text-sm">{step}</span>
-                    </li>
-                  ))}
-                </ol>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangleIcon className="h-5 w-5 text-orange-500" />
-                  Risk Factors
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {pathway.riskFactors.map((risk, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="text-orange-500">⚠️</span>
-                      {risk}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="requirements" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Visa Requirements</CardTitle>
-              <CardDescription>
-                Requirements for {primaryVisa?.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {primaryVisa?.requirements.map((req, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between border-b pb-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium",
-                          req.priority === "critical"
-                            ? "bg-red-100 text-red-700"
-                            : req.priority === "important"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-green-100 text-green-700"
-                        )}
-                      >
-                        {i + 1}
-                      </div>
-                      <span>{req.name}</span>
-                    </div>
-                    <Badge
-                      variant={
-                        req.priority === "critical"
-                          ? "destructive"
-                          : req.priority === "important"
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      {req.priority}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            {primaryVisa?.salaryThreshold && (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">
-                    Minimum Salary
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {primaryVisa.salaryThreshold.toLocaleString()}{" "}
-                    {primaryVisa.currency}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            {primaryVisa?.educationRequired && (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">
-                    Education Required
-                  </p>
-                  <p className="text-2xl font-bold capitalize">
-                    {primaryVisa.educationRequired}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            {primaryVisa?.languageRequirement && (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">
-                    Language Level
-                  </p>
-                  <p className="text-2xl font-bold capitalize">
-                    {primaryVisa.languageRequirement}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="costs" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Cost Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b pb-3">
-                  <span>Application Fee</span>
-                  <span className="font-semibold">
-                    {primaryVisa?.applicationFee.toLocaleString()}{" "}
-                    {primaryVisa?.currency}
-                  </span>
-                </div>
-                {primaryVisa?.legalFee && (
-                  <div className="flex justify-between items-center border-b pb-3">
-                    <span>Legal Fees (estimated)</span>
-                    <span className="font-semibold">
-                      {primaryVisa.legalFee.toLocaleString()}{" "}
-                      {primaryVisa.currency}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center pt-2">
-                  <span className="font-bold">Total Estimated</span>
-                  <span className="text-2xl font-bold text-primary">
-                    ${pathway.totalCost.toLocaleString()} USD
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="timeline" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Processing Timeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative pl-8 space-y-6">
-                <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-border" />
-
-                <div className="relative">
-                  <div className="absolute -left-5 w-4 h-4 rounded-full bg-primary" />
-                  <p className="font-semibold">Start Application</p>
-                  <p className="text-sm text-muted-foreground">Day 0</p>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute -left-5 w-4 h-4 rounded-full bg-muted border-2 border-primary" />
-                  <p className="font-semibold">Submit Documents</p>
-                  <p className="text-sm text-muted-foreground">Day 7-14</p>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute -left-5 w-4 h-4 rounded-full bg-muted border-2 border-primary" />
-                  <p className="font-semibold">Under Review</p>
-                  <p className="text-sm text-muted-foreground">
-                    Day {primaryVisa?.processingTimeMin} -{" "}
-                    {primaryVisa?.processingTimeMax}
-                  </p>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute -left-5 w-4 h-4 rounded-full bg-muted border-2 border-primary" />
-                  <p className="font-semibold">Decision Expected</p>
-                  <p className="text-sm text-muted-foreground">
-                    ~Day {pathway.estimatedProcessingTime}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Actions */}
-      <div className="flex gap-4">
-        <Link href="/dashboard/documents" className="flex-1">
-          <Button variant="outline" className="w-full">
-            <FileTextIcon className="mr-2 h-4 w-4" />
-            Upload Documents
-          </Button>
-        </Link>
-        <Link href="/dashboard/chat" className="flex-1">
-          <Button className="w-full">
-            <MessageSquareIcon className="mr-2 h-4 w-4" />
-            Ask AI Questions
+      {/* Back to History */}
+      <div className="flex justify-center pt-4">
+        <Link href="/dashboard/results">
+          <Button variant="outline">
+            <ArrowLeftIcon className="mr-2 h-4 w-4" />
+            Back to Analysis History
           </Button>
         </Link>
       </div>

@@ -14,7 +14,9 @@
     "db:seed": "bun run lib/db/seed.ts"
   },
   "dependencies": {
-    "@ai-sdk/react": "^3.0.0-beta.151",
+    "@ai-sdk/google": "^2.0.46",
+    "@ai-sdk/provider": "^2.0.0",
+    "@ai-sdk/react": "^3.0.0-beta.153",
     "@auth/drizzle-adapter": "^1.11.1",
     "@hookform/resolvers": "^5.2.2",
     "@neondatabase/serverless": "^1.0.2",
@@ -44,7 +46,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "ai": "^6.0.0-beta.148",
+    "ai": "^6.0.0-beta.150",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

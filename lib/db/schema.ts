@@ -282,6 +282,88 @@ export const pathwayComparisonsRelations = relations(
 );
 
 // ============================================
+// ANALYSIS SESSIONS TABLE (Saved Analyses)
+// ============================================
+export const analysisSessions = pgTable("analysis_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+
+  // Profile snapshot at time of analysis
+  profileSnapshot: jsonb("profile_snapshot").notNull(),
+  targetCountries: text("target_countries").array().notNull(),
+
+  // Status and labeling
+  status: varchar("status", { length: 20 }).notNull().default("active"), // active, archived, starred
+  title: varchar("title", { length: 255 }),
+
+  // Results summary (for listing without loading full data)
+  pathwaysCount: integer("pathways_count").notNull().default(0),
+  topPathwayCode: varchar("top_pathway_code", { length: 50 }),
+  topPathwayScore: integer("top_pathway_score"),
+  overallAssessment: text("overall_assessment"),
+  topRecommendation: text("top_recommendation"),
+
+  // Full results (stored for history retrieval)
+  pathwaysData: jsonb("pathways_data").notNull().default([]),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const analysisSessionsRelations = relations(
+  analysisSessions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [analysisSessions.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+// ============================================
+// VISA RESEARCH TABLE (Cached Real-Time Research)
+// ============================================
+export const visaResearch = pgTable("visa_research", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  visaTypeId: uuid("visa_type_id")
+    .references(() => visaTypes.id, { onDelete: "cascade" })
+    .notNull(),
+  visaCode: varchar("visa_code", { length: 50 }).notNull(),
+
+  // Cache timing
+  researchedAt: timestamp("researched_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+
+  // Verified data from web search
+  officialRequirements: jsonb("official_requirements").notNull().default([]),
+  currentFees: jsonb("current_fees").notNull().default({}),
+  processingTimes: jsonb("processing_times").notNull().default({}),
+  eligibilityCriteria: jsonb("eligibility_criteria").notNull().default({}),
+  recentChanges: text("recent_changes").array().default([]),
+
+  // Application process steps
+  applicationSteps: jsonb("application_steps").notNull().default([]),
+
+  // Sources for trust/verification
+  sources: jsonb("sources").notNull().default([]),
+
+  // AI-generated content
+  aiSummary: text("ai_summary"),
+  confidenceScore: integer("confidence_score").notNull().default(80),
+
+  // Metadata
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const visaResearchRelations = relations(visaResearch, ({ one }) => ({
+  visaType: one(visaTypes, {
+    fields: [visaResearch.visaTypeId],
+    references: [visaTypes.id],
+  }),
+}));
+
+// ============================================
 // TYPE EXPORTS
 // ============================================
 export type User = typeof users.$inferSelect;
@@ -307,3 +389,9 @@ export type NewChatMessage = typeof chatMessages.$inferInsert;
 
 export type PathwayComparison = typeof pathwayComparisons.$inferSelect;
 export type NewPathwayComparison = typeof pathwayComparisons.$inferInsert;
+
+export type AnalysisSession = typeof analysisSessions.$inferSelect;
+export type NewAnalysisSession = typeof analysisSessions.$inferInsert;
+
+export type VisaResearchType = typeof visaResearch.$inferSelect;
+export type NewVisaResearch = typeof visaResearch.$inferInsert;
