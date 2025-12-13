@@ -325,9 +325,9 @@ export const analysisSessionsRelations = relations(
 // ============================================
 export const visaResearch = pgTable("visa_research", {
   id: uuid("id").primaryKey().defaultRandom(),
-  visaTypeId: uuid("visa_type_id")
-    .references(() => visaTypes.id, { onDelete: "cascade" })
-    .notNull(),
+  visaTypeId: uuid("visa_type_id").references(() => visaTypes.id, {
+    onDelete: "cascade",
+  }),
   visaCode: varchar("visa_code", { length: 50 }).notNull(),
 
   // Cache timing

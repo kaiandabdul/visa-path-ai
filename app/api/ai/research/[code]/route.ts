@@ -71,6 +71,10 @@ const VisaResearchSchema = z.object({
   ),
   aiSummary: z.string(),
   confidenceScore: z.number().min(0).max(100),
+  // Add visa metadata for when type is not in DB
+  visaName: z.string(),
+  visaCategory: z.string(),
+  visaDescription: z.string(),
 });
 
 // Cache duration: 7 days
@@ -89,7 +93,25 @@ const COUNTRY_NAMES: Record<string, string> = {
   ES: "Spain",
   FR: "France",
   US: "United States",
+  JP: "Japan",
+  KR: "South Korea",
+  NZ: "New Zealand",
+  CH: "Switzerland",
+  SE: "Sweden",
+  NO: "Norway",
+  DK: "Denmark",
+  IE: "Ireland",
+  AT: "Austria",
 };
+
+// Extract country code from visa code (e.g., "jp-highly-skilled" -> "JP")
+function extractCountryCode(visaCode: string): string {
+  const parts = visaCode.split("-");
+  if (parts.length > 0) {
+    return parts[0].toUpperCase();
+  }
+  return "";
+}
 
 export async function GET(
   _request: Request,
@@ -99,21 +121,14 @@ export async function GET(
     const { code } = await params;
     const visaCode = code.toUpperCase();
 
-    // Find the visa type in DB
+    // Try to find the visa type in DB
     const visaTypeResults = await db
       .select()
       .from(visaTypes)
       .where(eq(visaTypes.code, visaCode))
       .limit(1);
 
-    if (visaTypeResults.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "Visa type not found" },
-        { status: 404 }
-      );
-    }
-
-    const visaType = visaTypeResults[0];
+    const visaType = visaTypeResults.length > 0 ? visaTypeResults[0] : null;
 
     // Check for cached research (not expired)
     const now = new Date();
@@ -129,12 +144,39 @@ export async function GET(
       .limit(1);
 
     if (cachedResearch.length > 0) {
-      // Return cached data
       const cached = cachedResearch[0];
+
+      // Build visa info (from DB or cached metadata)
+      const visaInfo = visaType || {
+        id: null,
+        code: visaCode,
+        name:
+          (cached.officialRequirements as Record<string, unknown>)?.visaName ||
+          visaCode.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        country: extractCountryCode(visaCode),
+        category: "work",
+        description: cached.aiSummary || "Immigration visa",
+        processingTimeMin:
+          (cached.processingTimes as Record<string, Record<string, number>>)
+            ?.standard?.minDays || 30,
+        processingTimeMax:
+          (cached.processingTimes as Record<string, Record<string, number>>)
+            ?.standard?.maxDays || 90,
+        processingTimeAvg:
+          (cached.processingTimes as Record<string, Record<string, number>>)
+            ?.standard?.avgDays || 60,
+        applicationFee:
+          (cached.currentFees as Record<string, number>)?.applicationFee || 0,
+        legalFee: null,
+        currency:
+          (cached.currentFees as Record<string, string>)?.currency || "USD",
+        successRate: 75,
+      };
+
       return NextResponse.json({
         success: true,
         data: {
-          visa: visaType,
+          visa: visaInfo,
           research: {
             ...cached,
             isLive: false,
@@ -147,21 +189,28 @@ export async function GET(
     // No valid cache - perform live research with Gemini
     console.log(`[Visa Research] Performing live research for ${visaCode}...`);
 
-    const countryName = COUNTRY_NAMES[visaType.country] || visaType.country;
+    const countryCode = extractCountryCode(visaCode);
+    const countryName = COUNTRY_NAMES[countryCode] || countryCode;
+    const visaName =
+      visaType?.name ||
+      visaCode.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
     const result = await generateObject({
       model: geminiModel,
       schema: VisaResearchSchema,
-      prompt: `You are a professional immigration consultant researching the "${
-        visaType.name
-      }" visa for ${countryName}.
+      prompt: `You are a professional immigration consultant researching the "${visaName}" visa for ${countryName}.
 
 Research and provide CURRENT, VERIFIED information about this visa:
 
 Visa Code: ${visaCode}
-Visa Name: ${visaType.name}
-Category: ${visaType.category}
-Description: ${visaType.description || "Work/immigration visa"}
+Visa Name: ${visaName}
+Country: ${countryName}
+${
+  visaType
+    ? `Category: ${visaType.category}
+Description: ${visaType.description || "Work/immigration visa"}`
+    : ""
+}
 
 Please research:
 1. Official requirements - what documents and qualifications are needed
@@ -171,6 +220,11 @@ Please research:
 5. Step-by-step application process
 6. Any recent policy changes in the last 6 months
 7. Official government sources (provide real URLs)
+
+Also provide:
+- visaName: The official name of this visa
+- visaCategory: The category (work, entrepreneur, investor, etc.)
+- visaDescription: A brief 1-2 sentence description of this visa
 
 IMPORTANT:
 - Only provide verified information from official sources
@@ -190,7 +244,7 @@ IMPORTANT:
     const [savedResearch] = await db
       .insert(visaResearch)
       .values({
-        visaTypeId: visaType.id,
+        visaTypeId: visaType?.id || null,
         visaCode: visaCode,
         researchedAt: now,
         expiresAt,
@@ -206,10 +260,30 @@ IMPORTANT:
       })
       .returning();
 
+    // Build visa info
+    const visaInfo = visaType || {
+      id: null,
+      code: visaCode,
+      name: result.object.visaName || visaName,
+      country: countryCode,
+      category: result.object.visaCategory || "work",
+      description:
+        result.object.visaDescription ||
+        result.object.aiSummary?.slice(0, 200) ||
+        "Immigration visa",
+      processingTimeMin: result.object.processingTimes.standard.minDays,
+      processingTimeMax: result.object.processingTimes.standard.maxDays,
+      processingTimeAvg: result.object.processingTimes.standard.avgDays,
+      applicationFee: result.object.currentFees.applicationFee,
+      legalFee: null,
+      currency: result.object.currentFees.currency,
+      successRate: 75,
+    };
+
     return NextResponse.json({
       success: true,
       data: {
-        visa: visaType,
+        visa: visaInfo,
         research: {
           ...savedResearch,
           isLive: true,
