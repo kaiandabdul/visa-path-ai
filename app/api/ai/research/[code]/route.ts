@@ -256,7 +256,11 @@ IMPORTANT:
         recentChanges: result.object.recentChanges,
         sources: result.object.sources,
         aiSummary: result.object.aiSummary,
-        confidenceScore: result.object.confidenceScore,
+        // Convert decimal to integer if AI returns as 0.0-1.0 instead of 0-100
+        confidenceScore:
+          result.object.confidenceScore <= 1
+            ? Math.round(result.object.confidenceScore * 100)
+            : Math.round(result.object.confidenceScore),
       })
       .returning();
 
