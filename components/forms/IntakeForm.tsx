@@ -112,9 +112,27 @@ export function IntakeForm({ onSubmit }: IntakeFormProps) {
       }
       // Store in localStorage for demo
       localStorage.setItem("userProfile", JSON.stringify(formData));
-      router.push("/dashboard/results");
+
+      // Create analysis session via API
+      const response = await fetch("/api/analysis-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userProfile: formData }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data?.sessionId) {
+        // Redirect to the specific session detail page
+        router.push(`/dashboard/results/${result.data.sessionId}`);
+      } else {
+        // Fallback to results history if session creation fails
+        console.error("Session creation failed:", result.error);
+        router.push("/dashboard/results");
+      }
     } catch (error) {
       console.error("Submission error:", error);
+      router.push("/dashboard/results");
     } finally {
       setIsSubmitting(false);
     }
