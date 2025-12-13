@@ -72,12 +72,12 @@ export default function DashboardLayout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
+        <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+          <div className="flex items-center gap-3 px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
+              className="mr-1 data-[orientation=vertical]:h-5 bg-border/50"
             />
             <Breadcrumb>
               <BreadcrumbList>
@@ -90,9 +90,9 @@ export default function DashboardLayout({
                       <BreadcrumbSeparator className="hidden md:block" />
                     )}
                     {crumb.isLast ? (
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                      <BreadcrumbPage className="font-medium">{crumb.label}</BreadcrumbPage>
                     ) : (
-                      <BreadcrumbLink href={crumb.href}>
+                      <BreadcrumbLink href={crumb.href} className="text-muted-foreground hover:text-foreground transition-colors">
                         {crumb.label}
                       </BreadcrumbLink>
                     )}
@@ -102,7 +102,7 @@ export default function DashboardLayout({
             </Breadcrumb>
           </div>
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6 md:p-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

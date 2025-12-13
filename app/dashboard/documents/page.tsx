@@ -627,7 +627,7 @@ export default function DocumentsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Document Management</h1>
+        <h1 className="text-2xl font-bold font-serif">Document Management</h1>
         <p className="text-muted-foreground">
           Upload your documents and add details for AI-powered assistance
         </p>
@@ -636,10 +636,10 @@ export default function DocumentsPage() {
       {/* Upload Area */}
       <Card
         className={cn(
-          "border-2 border-dashed transition-colors cursor-pointer",
+          "border-2 border-dashed transition-all duration-200 cursor-pointer rounded-2xl",
           dragOver
-            ? "border-primary bg-primary/5"
-            : "border-border hover:border-primary/50"
+            ? "border-primary bg-primary/5 scale-[1.01]"
+            : "border-border/50 hover:border-primary/50 hover:bg-muted/30"
         )}
         onDragOver={(e) => {
           e.preventDefault();
@@ -649,11 +649,13 @@ export default function DocumentsPage() {
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
       >
-        <CardContent className="flex flex-col items-center justify-center py-12">
+        <CardContent className="flex flex-col items-center justify-center py-14">
           {isUploading ? (
             <>
-              <Spinner className="size-10 mb-4" />
-              <p className="font-medium mb-1">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-5">
+                <Spinner className="size-8 text-primary" />
+              </div>
+              <p className="font-semibold mb-1">
                 {scanningProgress || "Processing documents..."}
               </p>
               <p className="text-sm text-muted-foreground">
@@ -662,17 +664,21 @@ export default function DocumentsPage() {
             </>
           ) : (
             <>
-              <div className="flex items-center gap-2 mb-4">
-                <CloudUploadIcon className="h-10 w-10 text-muted-foreground" />
-                <SparklesIcon className="h-6 w-6 text-primary" />
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+                  <CloudUploadIcon className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <SparklesIcon className="h-5 w-5 text-primary" />
+                </div>
               </div>
-              <p className="text-lg font-medium mb-1">
+              <p className="text-lg font-semibold mb-1">
                 Drop files here or click to upload
               </p>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-5">
                 AI will automatically scan and extract document details
               </p>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="rounded-full px-5">
                 <UploadIcon className="mr-2 h-4 w-4" />
                 Select Files
               </Button>
@@ -690,23 +696,23 @@ export default function DocumentsPage() {
       </Card>
 
       {/* Progress */}
-      <Card>
+      <Card className="border-2 border-border/50 rounded-2xl">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Document Progress</CardTitle>
+          <CardTitle className="text-base font-semibold">Document Progress</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between text-sm mb-2">
+          <div className="flex items-center justify-between text-sm mb-3">
             <span className="text-muted-foreground">
               {completedRequiredTypes.size} of {requiredTypes.length} required
               documents verified
             </span>
-            <span className="font-medium">{Math.round(requiredProgress)}%</span>
+            <span className="font-semibold text-primary">{Math.round(requiredProgress)}%</span>
           </div>
-          <Progress value={requiredProgress} className="h-2" />
+          <Progress value={requiredProgress} className="h-2.5 rounded-full" />
           {documents.filter((d) => d.status === "pending_details").length >
             0 && (
-            <p className="text-sm text-orange-500 mt-2">
-              ⚠️{" "}
+            <p className="text-sm text-amber-600 mt-3 flex items-center gap-2">
+              <ClockIcon className="h-4 w-4" />
               {documents.filter((d) => d.status === "pending_details").length}{" "}
               document(s) need details added
             </p>
@@ -719,10 +725,12 @@ export default function DocumentsPage() {
         <h2 className="mb-4 text-lg font-semibold">Your Documents</h2>
 
         {documents.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <FileTextIcon className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No documents uploaded yet</p>
+          <Card className="border-2 border-dashed border-border/50 rounded-2xl">
+            <CardContent className="flex flex-col items-center justify-center py-14">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50 mb-5">
+                <FileTextIcon className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="font-medium text-muted-foreground mb-1">No documents uploaded yet</p>
               <p className="text-sm text-muted-foreground">
                 Upload your passport, degree, and resume to get started
               </p>
@@ -737,18 +745,18 @@ export default function DocumentsPage() {
               if (docsOfType.length === 0) return null;
 
               return (
-                <Card key={type} className="border-border">
+                <Card key={type} className="border-2 border-border/50 rounded-2xl card-hover">
                   <CardHeader className="pb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                        <Icon className="h-4 w-4 text-primary" />
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                        <Icon className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-sm font-medium">
+                        <CardTitle className="text-sm font-semibold">
                           {config.name}
                         </CardTitle>
                         {config.required && (
-                          <Badge variant="outline" className="text-xs mt-0.5">
+                          <Badge variant="outline" className="text-[10px] mt-0.5 rounded-full px-2">
                             Required
                           </Badge>
                         )}
@@ -841,27 +849,30 @@ export default function DocumentsPage() {
       </div>
 
       {/* Tips */}
-      <Card className="bg-muted/30">
+      <Card className="bg-primary/5 border-2 border-primary/10 rounded-2xl">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">How Documents Help AI</CardTitle>
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <SparklesIcon className="h-4 w-4 text-primary" />
+            How Documents Help AI
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-            <div className="flex items-center gap-2">
-              <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
-              AI Chat can see your document details
+          <div className="grid gap-3 text-sm md:grid-cols-2">
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
+              <CheckCircleIcon className="h-5 w-5 text-primary shrink-0" />
+              <span>AI Chat can see your document details</span>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
-              Passport info helps with visa eligibility
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
+              <CheckCircleIcon className="h-5 w-5 text-primary shrink-0" />
+              <span>Passport info helps with visa eligibility</span>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
-              Degree details help with work visa points
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
+              <CheckCircleIcon className="h-5 w-5 text-primary shrink-0" />
+              <span>Degree details help with work visa points</span>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckCircleIcon className="h-4 w-4 text-green-500 shrink-0" />
-              Language scores affect visa options
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
+              <CheckCircleIcon className="h-5 w-5 text-primary shrink-0" />
+              <span>Language scores affect visa options</span>
             </div>
           </div>
         </CardContent>

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=JetBrains+Mono:wght@400;500&display=swap");
 
 @plugin "tailwindcss-animate";
 @import "../styles/variables.css";
@@ -8,7 +8,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
 }
 
 html {
@@ -21,6 +22,9 @@ body {
   color: hsl(var(--color-foreground));
   transition: background-color var(--transition-base),
     color var(--transition-base);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Focus styles */
@@ -31,54 +35,74 @@ body {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--color-muted));
-  border-radius: var(--radius-full);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--color-muted-foreground) / 0.3);
+  background: hsl(var(--color-muted-foreground) / 0.2);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--color-muted-foreground) / 0.5);
+  background: hsl(var(--color-muted-foreground) / 0.35);
 }
 
 /* Selection */
 ::selection {
-  background-color: hsl(var(--color-primary) / 0.2);
+  background-color: hsl(var(--color-primary) / 0.15);
   color: hsl(var(--color-foreground));
 }
 
 /* Utility classes */
 .glass {
-  background: hsl(var(--color-surface) / 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid hsl(var(--color-border) / 0.5);
+  background: hsl(var(--color-surface) / 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--color-border) / 0.6);
 }
 
+/* Serif headings */
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+/* Primary color text - no gradient */
 .gradient-text {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--color-primary)),
-    hsl(var(--color-accent))
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: hsl(var(--color-primary));
+  font-weight: 600;
 }
 
+/* Solid primary background - no gradient */
 .gradient-bg {
+  background: hsl(var(--color-primary));
+}
+
+/* Subtle decorative border gradient (allowed per user) */
+.border-gradient {
+  position: relative;
+  background: hsl(var(--color-card));
+  border-radius: var(--radius-lg);
+}
+
+.border-gradient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
   background: linear-gradient(
     135deg,
-    hsl(var(--color-primary)),
-    hsl(var(--color-accent))
+    hsl(var(--color-primary) / 0.3),
+    hsl(var(--color-accent) / 0.2)
   );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* Animation utilities */
@@ -87,8 +111,31 @@ body {
 }
 
 .slide-in-up {
-  animation: slideUp var(--transition-base) ease-out;
+  animation: slideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
 
 /* Container */
 .container-narrow {
@@ -101,6 +148,25 @@ body {
   max-width: 1280px;
   margin-inline: auto;
   padding-inline: 1.5rem;
+}
+
+/* Subtle texture overlay for sections */
+.texture-dots {
+  background-image: radial-gradient(
+    hsl(var(--color-foreground) / 0.03) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 @theme inline {

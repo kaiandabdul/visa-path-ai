@@ -244,10 +244,12 @@ What would you like to know about this visa?`,
     <div className="flex h-[calc(100vh-12rem)] flex-col">
       {/* Visa Context Banner */}
       {visaContext && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-          <SparklesIcon className="h-5 w-5 text-primary shrink-0" />
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border-2 border-primary/20 bg-primary/5 p-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <SparklesIcon className="h-5 w-5 text-primary" />
+          </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">
+            <p className="font-semibold text-sm truncate">
               Discussing: {visaContext.name}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -255,7 +257,7 @@ What would you like to know about this visa?`,
             </p>
           </div>
           {visaContext.confidenceScore && (
-            <Badge variant="outline" className="shrink-0">
+            <Badge variant="outline" className="shrink-0 rounded-full px-3">
               {visaContext.confidenceScore}% verified
             </Badge>
           )}
@@ -263,27 +265,29 @@ What would you like to know about this visa?`,
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto rounded-lg border border-border bg-muted/20 p-4">
-        <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto rounded-2xl border-2 border-border/50 bg-muted/10 p-5">
+        <div className="space-y-5">
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
 
           {isLoading && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Spinner className="size-4" />
-              <span className="text-sm">AI is thinking...</span>
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Spinner className="size-4 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground">AI is thinking...</span>
             </div>
           )}
 
           {error && (
-            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-              <p>{error}</p>
+            <div className="rounded-2xl border-2 border-destructive/20 bg-destructive/5 p-5 text-sm">
+              <p className="text-destructive font-medium">{error}</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRetry}
-                className="mt-2"
+                className="mt-3"
               >
                 Retry
               </Button>
@@ -296,13 +300,13 @@ What would you like to know about this visa?`,
 
       {/* Suggested Questions */}
       {messages.length <= 1 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           {suggestedQuestions.map((question, index) => (
             <button
               key={`suggestion-${index}`}
               type="button"
               onClick={() => handleSuggestionClick(question)}
-              className="rounded-full border border-border bg-card px-4 py-2 text-sm transition-colors hover:border-primary/50 hover:bg-accent"
+              className="rounded-full border-2 border-border/50 bg-card px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm"
             >
               {question}
             </button>
@@ -311,20 +315,27 @@ What would you like to know about this visa?`,
       )}
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
-        <Input
-          value={input}
-          onChange={handleInputChange}
-          placeholder={
-            visaContext
-              ? `Ask about ${visaContext.name}...`
-              : "Ask about visa requirements, timelines, costs..."
-          }
-          disabled={isLoading}
-          className="flex-1"
-        />
-        <Button type="submit" disabled={!input.trim() || isLoading} size="icon">
-          <SendIcon className="h-4 w-4" />
+      <form onSubmit={handleSubmit} className="mt-5 flex gap-3">
+        <div className="relative flex-1">
+          <Input
+            value={input}
+            onChange={handleInputChange}
+            placeholder={
+              visaContext
+                ? `Ask about ${visaContext.name}...`
+                : "Ask about visa requirements, timelines, costs..."
+            }
+            disabled={isLoading}
+            className="h-12 pr-4 rounded-xl border-2 focus-visible:ring-primary/20"
+          />
+        </div>
+        <Button
+          type="submit"
+          disabled={!input.trim() || isLoading}
+          size="icon"
+          className="h-12 w-12 rounded-xl shadow-md shadow-primary/20"
+        >
+          <SendIcon className="h-5 w-5" />
         </Button>
       </form>
     </div>

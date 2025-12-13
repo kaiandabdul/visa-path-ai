@@ -40,12 +40,16 @@ export function SignInForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 text-4xl">🌍</div>
-          <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-surface texture-dots p-4">
+      <Card className="w-full max-w-md border-2 shadow-lg">
+        <CardHeader className="text-center pb-4">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+            </svg>
+          </div>
+          <CardTitle className="text-2xl font-serif">{APP_NAME}</CardTitle>
+          <CardDescription className="mt-1.5">
             Sign in to access your personalized visa pathways
           </CardDescription>
         </CardHeader>
@@ -54,7 +58,7 @@ export function SignInForm() {
           <div className="space-y-3">
             <Button
               variant="outline"
-              className="w-full h-12"
+              className="w-full h-12 border-2 font-medium"
               onClick={() => handleOAuthSignIn("google")}
               disabled={!!isLoading}
             >
@@ -85,7 +89,7 @@ export function SignInForm() {
 
             <Button
               variant="outline"
-              className="w-full h-12"
+              className="w-full h-12 border-2 font-medium"
               onClick={() => handleOAuthSignIn("github")}
               disabled={!!isLoading}
             >
@@ -107,10 +111,10 @@ export function SignInForm() {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
+              <span className="bg-card px-3 text-muted-foreground font-medium">
                 Or continue with demo
               </span>
             </div>
@@ -118,8 +122,8 @@ export function SignInForm() {
 
           {/* Demo Sign In */}
           <form onSubmit={handleDemoSignIn} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -129,7 +133,7 @@ export function SignInForm() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={!!isLoading}>
+            <Button type="submit" className="w-full h-11 font-medium shadow-md shadow-primary/15" disabled={!!isLoading}>
               {isLoading === "demo" ? (
                 <Spinner className="mr-2 size-4" />
               ) : null}

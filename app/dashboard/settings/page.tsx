@@ -59,34 +59,34 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <h1 className="text-2xl font-bold font-serif">Settings</h1>
         <p className="text-muted-foreground">
           Manage your account and preferences
         </p>
       </div>
 
       {saved && (
-        <Alert>
-          <CheckCircleIcon className="h-4 w-4" />
-          <AlertTitle>Settings saved</AlertTitle>
-          <AlertDescription>
+        <Alert className="bg-primary/5 border-2 border-primary/20 rounded-2xl">
+          <CheckCircleIcon className="h-4 w-4 text-primary" />
+          <AlertTitle className="text-primary font-semibold">Settings saved</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
             Your settings have been updated successfully.
           </AlertDescription>
         </Alert>
       )}
 
       {/* Appearance */}
-      <Card>
+      <Card className="border-2 border-border/50 rounded-2xl">
         <CardHeader>
-          <CardTitle>Appearance</CardTitle>
+          <CardTitle className="font-semibold">Appearance</CardTitle>
           <CardDescription>
             Customize how VisaPath AI looks on your device
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label className="mb-3 block">Theme</Label>
-            <div className="flex gap-2">
+            <Label className="mb-3 block text-sm font-medium">Theme</Label>
+            <div className="flex gap-3">
               {themeOptions.map((t) => {
                 const Icon = t.icon;
                 return (
@@ -95,10 +95,10 @@ export default function SettingsPage() {
                     type="button"
                     onClick={() => setTheme(t.value)}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+                      "flex items-center gap-2 rounded-xl border-2 px-5 py-3 text-sm font-medium transition-all duration-200",
                       theme === t.value
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border hover:border-primary/50"
+                        ? "border-primary bg-primary/10 text-primary shadow-sm"
+                        : "border-border/50 hover:border-primary/50 hover:bg-muted/50"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -112,9 +112,9 @@ export default function SettingsPage() {
       </Card>
 
       {/* Profile Summary */}
-      <Card>
+      <Card className="border-2 border-border/50 rounded-2xl">
         <CardHeader>
-          <CardTitle>Profile Summary</CardTitle>
+          <CardTitle className="font-semibold">Profile Summary</CardTitle>
           <CardDescription>
             Your current profile information used for visa analysis
           </CardDescription>
@@ -122,33 +122,33 @@ export default function SettingsPage() {
         <CardContent>
           {profile ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
                 <span className="text-sm text-muted-foreground">
                   Profession
                 </span>
-                <span className="text-sm font-medium">
+                <span className="text-sm font-semibold">
                   {profile.profession}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
                 <span className="text-sm text-muted-foreground">
                   Experience
                 </span>
-                <span className="text-sm font-medium">
+                <span className="text-sm font-semibold">
                   {profile.yearsExperience} years
                 </span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
                 <span className="text-sm text-muted-foreground">Education</span>
-                <span className="text-sm font-medium">{profile.education}</span>
+                <span className="text-sm font-semibold">{profile.education}</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
                 <span className="text-sm text-muted-foreground">
                   Target Countries
                 </span>
                 <div className="flex gap-1">
                   {profile.targetCountries.map((c) => (
-                    <Badge key={c} variant="secondary">
+                    <Badge key={c} variant="secondary" className="rounded-full px-2.5">
                       {c}
                     </Badge>
                   ))}
@@ -156,7 +156,7 @@ export default function SettingsPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground p-4 rounded-xl bg-muted/30 text-center">
               No profile data yet. Complete the intake form to get started.
             </p>
           )}
@@ -164,17 +164,17 @@ export default function SettingsPage() {
       </Card>
 
       {/* Notifications */}
-      <Card>
+      <Card className="border-2 border-border/50 rounded-2xl">
         <CardHeader>
-          <CardTitle>Notifications</CardTitle>
+          <CardTitle className="font-semibold">Notifications</CardTitle>
           <CardDescription>
             Manage how you receive updates and alerts
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
             <div className="space-y-0.5">
-              <Label>Email Updates</Label>
+              <Label className="font-medium">Email Updates</Label>
               <p className="text-sm text-muted-foreground">
                 Receive visa pathway updates via email
               </p>
@@ -186,9 +186,9 @@ export default function SettingsPage() {
               }
             />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
             <div className="space-y-0.5">
-              <Label>Processing Alerts</Label>
+              <Label className="font-medium">Processing Alerts</Label>
               <p className="text-sm text-muted-foreground">
                 Get notified when processing times change
               </p>
@@ -204,22 +204,22 @@ export default function SettingsPage() {
       </Card>
 
       {/* Danger Zone */}
-      <Card className="border-destructive/50">
+      <Card className="border-2 border-destructive/30 rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          <CardTitle className="text-destructive font-semibold">Danger Zone</CardTitle>
           <CardDescription>
             Irreversible actions for your account
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-destructive/5">
             <div>
-              <p className="font-medium">Clear All Data</p>
+              <p className="font-semibold">Clear All Data</p>
               <p className="text-sm text-muted-foreground">
                 Remove all your profile data and analysis history
               </p>
             </div>
-            <Button variant="destructive" onClick={handleClearData}>
+            <Button variant="destructive" onClick={handleClearData} className="rounded-xl">
               Clear Data
             </Button>
           </div>
@@ -228,7 +228,9 @@ export default function SettingsPage() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave}>Save Settings</Button>
+        <Button onClick={handleSave} className="rounded-xl shadow-md shadow-primary/20 px-8">
+          Save Settings
+        </Button>
       </div>
     </div>
   );

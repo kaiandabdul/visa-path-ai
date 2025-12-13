@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SparklesIcon, UserIcon } from "lucide-react";
 
 interface Message {
   id: string;
@@ -16,29 +17,27 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   return (
     <div className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
-      {/* Avatar */}
+      {/* Assistant Avatar */}
       {!isUser && (
-        <Avatar className="h-8 w-8 bg-gradient-to-br from-primary to-blue-600">
-          <AvatarFallback className="bg-gradient-to-br from-primary to-blue-600 text-primary-foreground text-xs font-bold">
-            V
-          </AvatarFallback>
-        </Avatar>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <SparklesIcon className="h-4 w-4" />
+        </div>
       )}
 
       {/* Message bubble */}
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-3",
+          "max-w-[80%] rounded-2xl px-4 py-3 shadow-sm",
           isUser
-            ? "bg-primary text-primary-foreground rounded-tr-sm"
-            : "bg-muted text-foreground rounded-tl-sm"
+            ? "bg-foreground text-background rounded-tr-md"
+            : "bg-card border border-border/50 text-foreground rounded-tl-md"
         )}
       >
         <div className="prose prose-sm dark:prose-invert max-w-none">
           {message.content.split("\n").map((line: string, i: number) => (
             <p
               key={`line-${message.id}-${i}`}
-              className={cn("m-0", i > 0 && "mt-2")}
+              className={cn("m-0 leading-relaxed", i > 0 && "mt-2")}
             >
               {line || "\u00A0"}
             </p>
@@ -48,11 +47,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
       {/* User Avatar */}
       {isUser && (
-        <Avatar className="h-8 w-8">
-          <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
-            U
-          </AvatarFallback>
-        </Avatar>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <UserIcon className="h-4 w-4" />
+        </div>
       )}
     </div>
   );
