@@ -7,7 +7,11 @@ import { z } from "zod";
 // Schema for creating a new analysis session
 const CreateSessionSchema = z.object({
   userProfile: z.object({
-    email: z.string().email().optional(),
+    email: z
+      .string()
+      .optional()
+      .transform((val) => (val && val.trim() !== "" ? val : undefined))
+      .pipe(z.string().email().optional()),
     currentCountry: z.string(),
     targetCountries: z.array(z.string()),
     profession: z.string(),
