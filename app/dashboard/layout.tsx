@@ -90,9 +90,14 @@ export default function DashboardLayout({
                       <BreadcrumbSeparator className="hidden md:block" />
                     )}
                     {crumb.isLast ? (
-                      <BreadcrumbPage className="font-medium">{crumb.label}</BreadcrumbPage>
+                      <BreadcrumbPage className="font-medium">
+                        {crumb.label}
+                      </BreadcrumbPage>
                     ) : (
-                      <BreadcrumbLink href={crumb.href} className="text-muted-foreground hover:text-foreground transition-colors">
+                      <BreadcrumbLink
+                        href={crumb.href}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         {crumb.label}
                       </BreadcrumbLink>
                     )}
