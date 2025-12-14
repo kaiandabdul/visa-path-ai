@@ -10,7 +10,7 @@ export function Header() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-50 mx-auto w-full border-b border-border/50 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
@@ -61,10 +61,14 @@ export function Header() {
 
           <div className="hidden items-center gap-3 md:flex">
             <Link href="/dashboard">
-              <Button variant="ghost" className="font-medium">Sign In</Button>
+              <Button variant="ghost" className="font-medium">
+                Sign In
+              </Button>
             </Link>
             <Link href="/dashboard/intake">
-              <Button className="shadow-md shadow-primary/15 font-medium">Get Started</Button>
+              <Button className="shadow-md shadow-primary/15 font-medium">
+                Get Started
+              </Button>
             </Link>
           </div>
 
